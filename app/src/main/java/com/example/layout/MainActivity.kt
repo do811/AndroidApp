@@ -1,6 +1,7 @@
 package com.example.layout
 
 import android.content.Intent
+
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.util.DisplayMetrics
