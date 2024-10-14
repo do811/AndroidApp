@@ -1,3 +1,5 @@
+package com.example.layout
+
 import java.lang.System.currentTimeMillis
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -100,7 +102,10 @@ class EchonetFormat {
             return list
         }
 
-        fun parseSelfNodeInstanceList(packet: DatagramPacket, collectTid: ByteArray?): List<EchonetObject> {
+        fun parseSelfNodeInstanceList(
+            packet: DatagramPacket,
+            collectTid: ByteArray?
+        ): List<EchonetObject> {
             return parseSelfNodeInstanceList(parsePacket(packet, collectTid))
         }
     }
@@ -218,8 +223,9 @@ class EchonetObject(val ipAddress: InetAddress, val eoj: List<Byte>) : IEchonetO
     }
 
     fun printStatus() {
-        val status = status.map { (k, v) -> "${stringToEpc.getKey(listOf(k))}: ${stringToEdt.getKey(listOf(v))}" }
-            .joinToString(", ")
+        val status =
+            status.map { (k, v) -> "${stringToEpc.getKey(listOf(k))}: ${stringToEdt.getKey(listOf(v))}" }
+                .joinToString(", ")
         println(status)
     }
 
@@ -311,7 +317,8 @@ fun main() {
 
     // ipアドレスが224.0.23.0で、EOJが0x0EF001（ノードプロファイル）のEchonetLiteオブジェクトを作成
     // 224.0.23.0はマルチキャストアドレス
-    val selfNodeInstanceList = EchonetObject(InetAddress.getByName("224.0.23.0"), listOf(0x0E, 0xF0.toByte(), 0x01))
+    val selfNodeInstanceList =
+        EchonetObject(InetAddress.getByName("224.0.23.0"), listOf(0x0E, 0xF0.toByte(), 0x01))
     println(selfNodeInstanceList)
     println()
     // selfNodeInstanceListを取得すると、自分の持っているEOJのリストが返ってくる
@@ -345,7 +352,12 @@ fun main() {
         try {
             socket.receive(packet)
             val list =
-                EchonetFormat.parseSelfNodeInstanceList(EchonetFormat.parsePacket(packet, byteArrayOf(0x00, 0x0A)))
+                EchonetFormat.parseSelfNodeInstanceList(
+                    EchonetFormat.parsePacket(
+                        packet,
+                        byteArrayOf(0x00, 0x0A)
+                    )
+                )
             println("応答を受け取りました:${list}\n")
 
         } catch (_: SocketTimeoutException) {
