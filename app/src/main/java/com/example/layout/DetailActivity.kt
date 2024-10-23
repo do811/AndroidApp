@@ -21,9 +21,6 @@ import java.net.InetAddress
 //import java.util.FormatProcessor as FMT
 
 class DetailActivity : AppCompatActivity() {
-    private val Execute: Execute by lazy {
-        ViewModelProvider(this).get(Execute::class.java)
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
 
