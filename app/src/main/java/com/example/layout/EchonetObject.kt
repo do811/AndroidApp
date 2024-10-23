@@ -1,4 +1,5 @@
-import java.lang.System.currentTimeMillis
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
@@ -49,7 +50,18 @@ class EchonetFormat {
             return payload.map { it }.toByteArray()
         }
 
-        fun parsePacket(packet: DatagramPacket, collectTid: ByteArray?): EchonetLitePacketData {
+        /**
+         * EchonetLiteのパケットを解析する
+         * Tidの照合も行うことが可能
+         * @param packet EchonetLiteのパケット
+         * @param collectTid Tidの照合を行う場合は指定する
+         * @return EchonetLiteのデータ
+         * @throws IllegalArgumentException パケットが短すぎる、EchonetLiteでない、Tidが一致しない場合
+         */
+        fun parsePacket(
+            packet: DatagramPacket,
+            collectTid: ByteArray? = null
+        ): EchonetLitePacketData {
             val data = packet.data
             if (data.size < 12) {
                 throw IllegalArgumentException("Echonet: packet is too short")
@@ -87,20 +99,23 @@ class EchonetFormat {
             return EchonetLitePacketData(packet.address, tid, seoj, deoj, esv, epc, edt)
         }
 
-        fun parseSelfNodeInstanceList(data: EchonetLitePacketData): List<EchonetObject> {
+        fun parseSelfNodeInstanceList(data: EchonetLitePacketData): List<EchonetObject<Number>> {
             if (data.esv != 0x72.toByte()) {
                 throw IllegalArgumentException("Echonet: esv is not 0x72")
             }
             val edt = data.edt ?: return listOf()
             val num = edt.get(0).toInt()
-            val list = mutableListOf<EchonetObject>()
+            val list = mutableListOf<EchonetObject<Number>>()
             for (i in 1..num) {
                 list.add(EchonetObject(data.ipAddress, edt.slice(1 + (i - 1) * 3 until 1 + i * 3)))
             }
             return list
         }
 
-        fun parseSelfNodeInstanceList(packet: DatagramPacket, collectTid: ByteArray?): List<EchonetObject> {
+        fun parseSelfNodeInstanceList(
+            packet: DatagramPacket,
+            collectTid: ByteArray?
+        ): List<EchonetObject<Number>> {
             return parseSelfNodeInstanceList(parsePacket(packet, collectTid))
         }
     }
@@ -114,14 +129,14 @@ interface IEchonetObject {
      * @param edt これはnullでもよい
      * @return 送信したパケット
      */
-    fun sendEchonetPacket(esv: String, epc: String, edt: String): ByteArray
+    fun sendEchonetPacket(esv: String, epc: String, edt: String): DatagramPacket
 
     /**
      * 任意のEPCのEDTをセットする 応答を受け取らない
      * @param epc EPCの値
      * @param edt EDTの値
      */
-    fun setI(epc: String, edt: String)
+    fun setI(epc: String, edt: String): EchonetLitePacketData
 
     /**
      * 任意のEPCのEDTをセットする 応答を受け取る
@@ -130,14 +145,16 @@ interface IEchonetObject {
      * @param timeout タイムアウト時間(ms) デフォルトは5秒
      * @return 応答（今のところ受け取ったパケットそのまま）
      */
-    fun setC(epc: String, edt: String, timeout: Int = 5000): Boolean
+    fun setC(epc: String, edt: String, timeout: Int = 5000): EchonetLitePacketData
 
     /**
      * 任意のEPCのEDTを知る
      * @param epc EPCの値
      * @return 応答（今のところ受け取ったパケットそのまま）
      */
-    fun get(epc: String): ByteArray
+    fun get(epc: String): EchonetLitePacketData
+
+    suspend fun asyncSetC(epc: String, edt: String, timeout: Int = 5000): EchonetLitePacketData
 }
 
 /**
@@ -145,7 +162,8 @@ interface IEchonetObject {
  * @param ipAddress IPアドレス 例："192.168.2.52"
  * @param eoj EOJ 3バイト 例：[0x02, 0x90, 0x01]
  */
-class EchonetObject(val ipAddress: InetAddress, val eoj: List<Byte>) : IEchonetObject {
+class EchonetObject<T : Number>(val ipAddress: InetAddress, eoj: List<T>) : IEchonetObject {
+    val eoj: List<Byte> = eoj.map { it.toByte() }
     // 参考：https://qiita.com/miyazawa_shi/items/725bc5eb6590be72970d
 
     private val controller = listOf(0x05.toByte(), 0xFF.toByte(), 0x01)
@@ -175,12 +193,13 @@ class EchonetObject(val ipAddress: InetAddress, val eoj: List<Byte>) : IEchonetO
 
         // eojによって使用可能なepc, edtを変更
         when {
-            eoj[0] == 0x02.toByte() && eoj[1] == 0x90.toByte() -> monoLite()
-            eoj[0] == 0x0E.toByte() && eoj[1] == 0xF0.toByte() -> nodeProfile()
+            this.eoj[0] == 0x02.toByte() && this.eoj[1] == 0x91.toByte() -> monoLite()
+            this.eoj[0] == 0x0E.toByte() && this.eoj[1] == 0xF0.toByte() -> nodeProfile()
         }
     }
 
     private fun monoLite() {
+        println("monoLite")
         stringToEpc["liteLevel"] = listOf(0xB0.toByte())
         stringToEdt["liteLevel" to "0"] = listOf(0x00)
         stringToEdt["liteLevel" to "10"] = listOf(0x0A)
@@ -218,12 +237,14 @@ class EchonetObject(val ipAddress: InetAddress, val eoj: List<Byte>) : IEchonetO
     }
 
     fun printStatus() {
-        val status = status.map { (k, v) -> "${stringToEpc.getKey(listOf(k))}: ${stringToEdt.getKey(listOf(v))}" }
+//        val status = status.map { (k, v) -> "${stringToEpc.getKey(listOf(k))}: ${stringToEdt.getKey(listOf(v))}" }
+//            .joinToString(", ")
+        val status = status.map { (k, v) -> "${stringToEdt.getKey(listOf(v))}" }
             .joinToString(", ")
         println(status)
     }
 
-    override fun sendEchonetPacket(esv: String, epc: String, edt: String): ByteArray {
+    override fun sendEchonetPacket(esv: String, epc: String, edt: String): DatagramPacket {
         // esv, epcはnullチェックをする。edtはnullでもよい
         val esvValue = stringToEsv[esv] ?: throw IllegalArgumentException("Echonet: esv is null")
         val epcValue = stringToEpc[epc] ?: throw IllegalArgumentException("Echonet: epc is null")
@@ -247,52 +268,42 @@ class EchonetObject(val ipAddress: InetAddress, val eoj: List<Byte>) : IEchonetO
         sendUdpSocket.close()
         println("送信完了")
         println("to: $ipAddress")
-        return packet
+        return sendPacket
     }
 
-    override fun setI(epc: String, edt: String) {
-        sendEchonetPacket("setI", epc, edt)
+    override fun setI(epc: String, edt: String): EchonetLitePacketData {
+        return EchonetFormat.parsePacket(sendEchonetPacket("setI", epc, edt))
     }
 
-    override fun setC(epc: String, edt: String, timeout: Int): Boolean {
-        sendEchonetPacket("setC", epc, edt)
-
-        val socket = DatagramSocket(echonetLitePort)
-        socket.soTimeout = 100
-        val buf = ByteArray(1024)
-        val packet = DatagramPacket(buf, buf.size)
-
-        var isReceived = false
-        val start = currentTimeMillis()
-
-        while (currentTimeMillis() - start < timeout) {
-            try {
-                socket.receive(packet)
-                if (packet.data[10] == 0x71.toByte()) {
-                    println("応答を受け取りました:${packet.data.toHexString()}")
-                    isReceived = true
-                    break
-                }
-            } catch (_: SocketTimeoutException) {
-            }
-        }
-
-        if (!isReceived) {
-            throw Exception("Echonet: setC timeout")
-        }
-
-        socket.close()
-
-        return true // 応答を受け取りたい
+    override fun setC(epc: String, edt: String, timeout: Int): EchonetLitePacketData {
+        return EchonetFormat.parsePacket(sendEchonetPacket("setC", epc, edt))
     }
 
-    override fun get(epc: String): ByteArray {
-        return sendEchonetPacket("get", epc, "")
+    override fun get(epc: String): EchonetLitePacketData {
+        return EchonetFormat.parsePacket(sendEchonetPacket("get", epc, ""))
     }
 
     override fun toString(): String {
         val status = status.map { (k, v) -> "$k: $v" }.joinToString(", ")
         return "{ip: $ipAddress, EOJ:${eoj.joinToString(" ") { "%02X".format(it) }}, status: $status}"
+    }
+
+    suspend fun asyncSetI(epc: String, edt: String): EchonetLitePacketData {
+        return withContext(Dispatchers.IO) {
+            setI(epc, edt)
+        }
+    }
+
+    override suspend fun asyncSetC(epc: String, edt: String, timeout: Int): EchonetLitePacketData {
+        return withContext(Dispatchers.IO) {
+            setC(epc, edt, timeout)
+        }
+    }
+
+    suspend fun asyncGet(epc: String): EchonetLitePacketData {
+        return withContext(Dispatchers.IO) {
+            get(epc)
+        }
     }
 }
 
@@ -311,12 +322,13 @@ fun main() {
 
     // ipアドレスが224.0.23.0で、EOJが0x0EF001（ノードプロファイル）のEchonetLiteオブジェクトを作成
     // 224.0.23.0はマルチキャストアドレス
-    val selfNodeInstanceList = EchonetObject(InetAddress.getByName("224.0.23.0"), listOf(0x0E, 0xF0.toByte(), 0x01))
+    val selfNodeInstanceList =
+        EchonetObject(InetAddress.getByName("224.0.23.0"), listOf(0x0E, 0xF0.toByte(), 0x01))
     println(selfNodeInstanceList)
     println()
     // selfNodeInstanceListを取得すると、自分の持っているEOJのリストが返ってくる
     // つまり、ネットワーク内の全てのEchonetLiteオブジェクトのリストが返ってくる
-    println(selfNodeInstanceList.get("selfNodeInstanceList").joinToString { "%02X".format(it) })
+    println(selfNodeInstanceList.get("selfNodeInstanceList"))
     // 取得した後解析してオブジェクトのリストを作成する処理が必要。未実装
 
     //  ip  :224.0.23.0
@@ -345,7 +357,12 @@ fun main() {
         try {
             socket.receive(packet)
             val list =
-                EchonetFormat.parseSelfNodeInstanceList(EchonetFormat.parsePacket(packet, byteArrayOf(0x00, 0x0A)))
+                EchonetFormat.parseSelfNodeInstanceList(
+                    EchonetFormat.parsePacket(
+                        packet,
+                        byteArrayOf(0x00, 0x0A)
+                    )
+                )
             println("応答を受け取りました:${list}\n")
 
         } catch (_: SocketTimeoutException) {
