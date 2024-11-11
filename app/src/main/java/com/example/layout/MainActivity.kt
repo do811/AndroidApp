@@ -10,6 +10,9 @@ import android.widget.RelativeLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.example.layout.intentsample.*
+import kotlinx.coroutines.runBlocking
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,7 +50,15 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent2secondsc)
         }
         button4.setOnClickListener {
-            startActivity(intent2secondsc)
+            val echonet = EchonetLiteManager()
+            lifecycleScope.launch {
+                echonet.asyncGetDeviceList()
+                echonet.deviceList.forEach { it ->
+                    val ret = it.asyncGet("power")
+                    println("ret:"+ret)
+                }
+                println("len:"+echonet.deviceList.size)
+            }
         }
 
     }

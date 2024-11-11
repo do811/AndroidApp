@@ -1,3 +1,5 @@
+package com.example.layout
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.DatagramPacket
@@ -6,163 +8,12 @@ import java.net.InetAddress
 import java.net.SocketTimeoutException
 
 
-data class EchonetLitePacketData(
-    val ipAddress: InetAddress,
-    val tid: List<Byte>,
-    val seoj: List<Byte>,
-    val deoj: List<Byte>,
-    val esv: Byte,
-    val epc: List<Byte>,
-    val edt: List<Byte>?,
-) {
-    override fun toString(): String {
-        val tidHex = tid.joinToString(" ") { "%02X".format(it) }
-        val seojHex = seoj.joinToString(" ") { "%02X".format(it) }
-        val deojHex = deoj.joinToString(" ") { "%02X".format(it) }
-        val esvHex = "%02X".format(esv)
-        val epcHex = epc.joinToString(" ") { "%02X".format(it) }
-        val edtHex = edt?.joinToString(" ") { "%02X".format(it) }
-
-        return "ipAddress: $ipAddress, tid: [$tidHex], seoj: [$seojHex], deoj: [$deojHex], esv: $esvHex, epc: [$epcHex], edt: [$edtHex]"
-    }
-}
-
-class EchonetFormat {
-    companion object {
-        /**
-         * esv, epc, edtからEchonetLiteのパケットを作成する
-         * @param data EchonetLiteのデータ
-         * @return EchonetLiteのパケット 例：[0x10, 0x81, 0x00, 0x0A, 0x05, 0xFF, 0x01, 0x02, 0x90, 0x01, 0x60, 0x01, 0x80, 0x01, 0x30]
-         */
-        fun makePacket(data: EchonetLitePacketData): ByteArray {
-            val payload = mutableListOf(0x10, 0x81.toByte())
-            payload.addAll(data.tid)
-            payload.addAll(data.seoj)
-            payload.addAll(data.deoj)
-            payload.add(data.esv)
-            payload.add(data.epc.size.toByte())
-            payload.addAll(data.epc)
-            // ノードプロファイルの場合などedtを送らないことがある
-            data.edt?.let {
-                payload.add(it.size.toByte())
-                payload.addAll(it)
-            } ?: run { payload.add(0) }
-            return payload.map { it }.toByteArray()
-        }
-
-        /**
-         * EchonetLiteのパケットを解析する
-         * Tidの照合も行うことが可能
-         * @param packet EchonetLiteのパケット
-         * @param collectTid Tidの照合を行う場合は指定する
-         * @return EchonetLiteのデータ
-         * @throws IllegalArgumentException パケットが短すぎる、EchonetLiteでない、Tidが一致しない場合
-         */
-        fun parsePacket(
-            packet: DatagramPacket,
-            collectTid: ByteArray? = null
-        ): EchonetLitePacketData {
-            val data = packet.data
-            if (data.size < 12) {
-                throw IllegalArgumentException("Echonet: packet is too short")
-            }
-            if (data[0] != 0x10.toByte() || data[1] != 0x81.toByte()) {
-                throw IllegalArgumentException("Echonet: packet is not EchonetLite")
-            }
-            if (collectTid != null) {
-                if (collectTid.size != 2) {
-                    throw IllegalArgumentException("Echonet: tid must be 2 bytes")
-                }
-                if (data[2] != collectTid[0] || data[3] != collectTid[1]) {
-                    throw IllegalArgumentException("Echonet: tid is not match")
-                }
-            }
-
-            val tid = data.slice(2 until 4).map { it }
-
-            val seoj = data.slice(4 until 4 + 3).map { it }
-            val deoj = data.slice(7 until 7 + 3).map { it }
-
-            val esv = data[10]
-
-            val epcSize = data[11]
-            val epc = data.slice(12 until 12 + epcSize).map { it }
-
-            val edtSizeIndex = 12 + epcSize
-            val edtSize = data[edtSizeIndex]
-
-            val edt = if (0 < edtSize) {
-                data.slice(edtSizeIndex + 1 until edtSizeIndex + 1 + edtSize).map { it }
-            } else {
-                null
-            }
-            return EchonetLitePacketData(packet.address, tid, seoj, deoj, esv, epc, edt)
-        }
-
-        fun parseSelfNodeInstanceList(data: EchonetLitePacketData): List<EchonetObject<Number>> {
-            if (data.esv != 0x72.toByte()) {
-                throw IllegalArgumentException("Echonet: esv is not 0x72")
-            }
-            val edt = data.edt ?: return listOf()
-            val num = edt.get(0).toInt()
-            val list = mutableListOf<EchonetObject<Number>>()
-            for (i in 1..num) {
-                list.add(EchonetObject(data.ipAddress, edt.slice(1 + (i - 1) * 3 until 1 + i * 3)))
-            }
-            return list
-        }
-
-        fun parseSelfNodeInstanceList(
-            packet: DatagramPacket,
-            collectTid: ByteArray?
-        ): List<EchonetObject<Number>> {
-            return parseSelfNodeInstanceList(parsePacket(packet, collectTid))
-        }
-    }
-}
-
-interface IEchonetObject {
-    /**
-     * Echonetのパケットを作成し、送信する
-     * @param esv
-     * @param epc
-     * @param edt これはnullでもよい
-     * @return 送信したパケット
-     */
-    fun sendEchonetPacket(esv: String, epc: String, edt: String): DatagramPacket
-
-    /**
-     * 任意のEPCのEDTをセットする 応答を受け取らない
-     * @param epc EPCの値
-     * @param edt EDTの値
-     */
-    fun setI(epc: String, edt: String): EchonetLitePacketData
-
-    /**
-     * 任意のEPCのEDTをセットする 応答を受け取る
-     * @param epc EPCの値
-     * @param edt EDTの値
-     * @param timeout タイムアウト時間(ms) デフォルトは5秒
-     * @return 応答（今のところ受け取ったパケットそのまま）
-     */
-    fun setC(epc: String, edt: String, timeout: Int = 5000): EchonetLitePacketData
-
-    /**
-     * 任意のEPCのEDTを知る
-     * @param epc EPCの値
-     * @return 応答（今のところ受け取ったパケットそのまま）
-     */
-    fun get(epc: String): EchonetLitePacketData
-
-    suspend fun asyncSetC(epc: String, edt: String, timeout: Int = 5000): EchonetLitePacketData
-}
-
 /**
- * EchonetObject
+ * EchonetLiteObject
  * @param ipAddress IPアドレス 例："192.168.2.52"
  * @param eoj EOJ 3バイト 例：[0x02, 0x90, 0x01]
  */
-class EchonetObject<T : Number>(val ipAddress: InetAddress, eoj: List<T>) : IEchonetObject {
+class EchonetLiteObject<T : Number>(val ipAddress: InetAddress, eoj: List<T>) : IEchonetLiteObject {
     val eoj: List<Byte> = eoj.map { it.toByte() }
     // 参考：https://qiita.com/miyazawa_shi/items/725bc5eb6590be72970d
 
@@ -323,7 +174,7 @@ fun main() {
     // ipアドレスが224.0.23.0で、EOJが0x0EF001（ノードプロファイル）のEchonetLiteオブジェクトを作成
     // 224.0.23.0はマルチキャストアドレス
     val selfNodeInstanceList =
-        EchonetObject(InetAddress.getByName("224.0.23.0"), listOf(0x0E, 0xF0.toByte(), 0x01))
+        EchonetLiteObject(InetAddress.getByName("224.0.23.0"), listOf(0x0E, 0xF0.toByte(), 0x01))
     println(selfNodeInstanceList)
     println()
     // selfNodeInstanceListを取得すると、自分の持っているEOJのリストが返ってくる

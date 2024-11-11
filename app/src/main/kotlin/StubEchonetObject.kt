@@ -1,3 +1,7 @@
+import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetAddress
+
 interface _StubEchonetObject {
     /**
      * Echonetのパケットを作成し、送信する（つもり）
