@@ -49,7 +49,7 @@ class DetailActivity : AppCompatActivity() {
                     InetAddress.getByName("192.168.2.52"),
                     listOf(0x02, 0x90.toByte(), 0x01)
                 )
-            stub.setI("power", "on")
+            stub.setI("power", "on");
         }
         button.setOnClickListener {
             try {
