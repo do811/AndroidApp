@@ -33,6 +33,9 @@ class ListAdapter(
         holder.MainText.text = data[position].MainText
         holder.SubText.text = data[position].SubText
         holder.Switch.isChecked = data[position].Switch
+        holder.Switch.setOnCheckedChangeListener { _, isChecked ->
+            listener.onSwitchClick(holder.adapterPosition, isChecked)
+        }
     }
 
 

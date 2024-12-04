@@ -9,16 +9,4 @@ class ListViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
     val MainText: TextView = itemView.findViewById(R.id.maintext)
     val SubText: TextView = itemView.findViewById(R.id.subtext)
     val Switch: Switch = itemView.findViewById(R.id.onoffS)
-
-    init {
-        Switch.setOnCheckedChangeListener { buttonView, isChecked ->
-            {
-                // Switch イベントをここで処理する
-                // 1. アダプターの位置を取得する
-                val position = adapterPosition
-                // 2. アダプターまたはアクティビティのメソッドを呼び出す
-                onSwitchClicked(position, isChecked)
-            }
-        }
-    }
 }

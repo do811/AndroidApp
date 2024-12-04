@@ -1,6 +1,8 @@
 package com.example.layout
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -14,27 +16,48 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
 class DetailActivity : AppCompatActivity(), ListAdapter.OnSwitchClickListener {
+    private val data = mutableListOf(
+        ListItem(1, "MainText1", "SubText1", true),
+        ListItem(2, "MainText2", "SubText2", false),
+        ListItem(3, "MainText3", "SubText3", true)
+    )
+    private lateinit var recycView: RecyclerView
+    private lateinit var adapter: ListAdapter
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_detail)
         val genebutton = findViewById<Button>(R.id.inc_button)
-        val data = mutableListOf<ListItem>(
-            ListItem(1, "MainText1", "SubText1", true),
-            ListItem(2, "MainText2", "SubText2", false),
-            ListItem(3, "MainText3", "SubText3", true)
-        )
-        val recycView = findViewById<RecyclerView>(R.id.rccv)
+        recycView = findViewById<RecyclerView>(R.id.rccv)
         recycView.setHasFixedSize(true)
         recycView.layoutManager = LinearLayoutManager(this).apply {
             orientation = LinearLayoutManager.VERTICAL
         }
+        adapter = ListAdapter(data, this)
+        recycView.adapter = adapter
+
 
         genebutton.setOnClickListener {
             data.add(ListItem(4, "MainText4", "SubText4", false))
-            recycView.adapter = ListAdapter(data)
+            recycView.post {
+                adapter.notifyItemInserted(data.size - 1)
+            }
         }
+
         fun onButtonClick(view: View) {
             finish()
+        }
+    }
+
+    override fun onSwitchClick(position: Int, isChecked: Boolean) {
+        data[position].Switch = isChecked
+        data[position].MainText = "Init"
+        if (isChecked) {
+            data[position].SubText = "ON"
+        } else {
+            data[position].SubText = "OFF"
+        }
+        recycView.post { // recycView.post を使用
+            adapter.notifyItemChanged(position) // notifyItemChanged() を呼び出す
         }
     }
 }
