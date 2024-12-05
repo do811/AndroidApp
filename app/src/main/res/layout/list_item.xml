@@ -12,21 +12,24 @@
 
         <TextView
                 android:text="mainText"
-                android:layout_width="100dp"
+                android:layout_width="150dp"
+                android:layout_height="50dp"
                 android:id="@+id/maintext"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/subtext"
                 app:layout_constraintStart_toStartOf="parent"
-                android:layout_height="30dp" />
+                android:layout_marginStart="16dp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toTopOf="@+id/subtext" />
 
         <TextView
                 android:text="subtext"
-                android:layout_width="150dp"
-                android:layout_height="50dp"
+                android:layout_width="100dp"
+                android:layout_height="30dp"
                 android:id="@+id/subtext"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toTopOf="@+id/maintext"
-                app:layout_constraintStart_toStartOf="parent" />
+                app:layout_constraintStart_toStartOf="parent"
+                android:layout_marginStart="16dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintVertical_bias="0.928"
+                app:layout_constraintTop_toBottomOf="@+id/maintext" />
 
         <Switch
                 android:text=" on/off"

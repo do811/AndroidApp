@@ -17,9 +17,9 @@ import androidx.recyclerview.widget.RecyclerView
 
 class DetailActivity : AppCompatActivity(), ListAdapter.OnSwitchClickListener {
     private val data = mutableListOf(
-        ListItem(1, "MainText1", "SubText1", true),
-        ListItem(2, "MainText2", "SubText2", false),
-        ListItem(3, "MainText3", "SubText3", true)
+        ListItem(1, "MainText1", "SubText1", true, "ON"),
+        ListItem(2, "MainText2", "SubText2", false, "OFF"),
+        ListItem(3, "MainText3", "SubText3", true, "ON")
     )
     private lateinit var recycView: RecyclerView
     private lateinit var adapter: ListAdapter
@@ -37,8 +37,8 @@ class DetailActivity : AppCompatActivity(), ListAdapter.OnSwitchClickListener {
 
 
         genebutton.setOnClickListener {
-            data.add(ListItem(4, "MainText4", "SubText4", false))
-            recycView.post {
+            data.add(ListItem(4, "MainText4", "SubText4", false, "OFF"))
+            recycView.post {//adapterをいじる際にpostを使用
                 adapter.notifyItemInserted(data.size - 1)
             }
         }
@@ -52,12 +52,12 @@ class DetailActivity : AppCompatActivity(), ListAdapter.OnSwitchClickListener {
         data[position].Switch = isChecked
         data[position].MainText = "Init"
         if (isChecked) {
-            data[position].SubText = "ON"
+            data[position].SwitchState = "ON"
         } else {
-            data[position].SubText = "OFF"
+            data[position].SwitchState = "OFF"
         }
-        recycView.post { // recycView.post を使用
-            adapter.notifyItemChanged(position) // notifyItemChanged() を呼び出す
+        recycView.post { // ここでも変更するためpostを使用
+            adapter.notifyItemChanged(position) //
         }
     }
 }
