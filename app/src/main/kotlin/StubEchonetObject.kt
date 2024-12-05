@@ -1,3 +1,7 @@
+import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetAddress
+
 interface _StubEchonetObject {
     /**
      * Echonetのパケットを作成し、送信する（つもり）
@@ -38,7 +42,8 @@ interface _StubEchonetObject {
  * @param ipAddress IPアドレス 例："192.168.2.52"
  * @param eoj EOJ 3バイト 例：[0x02, 0x90, 0x01]
  */
-class StubEchonetObject(private val ipAddress: String, private val eoj: List<Int>) : _StubEchonetObject {
+class StubEchonetObject(private val ipAddress: String, private val eoj: List<Int>) :
+    _StubEchonetObject {
     // 参考：https://qiita.com/miyazawa_shi/items/725bc5eb6590be72970d
 
     private val controller = listOf(0x05, 0xFF, 0x01)
@@ -144,14 +149,36 @@ class StubEchonetObject(private val ipAddress: String, private val eoj: List<Int
 //        sendEchonetPacket("setC", epc, edt)
         // ここに応答を待つ処理が入り、あれば応答をreturnする。
         // 応答は今のところByteArrayだが、もう少し分かりやすい形（esv等の形式？）にするかもしれない。
-        return listOf(0x10, 0x81, 0x00, 0x0A, 0x02, 0x91, 0x01, 0x71, 0x01, 0x80).map { it.toByte() }.toByteArray()
+        return listOf(
+            0x10,
+            0x81,
+            0x00,
+            0x0A,
+            0x02,
+            0x91,
+            0x01,
+            0x71,
+            0x01,
+            0x80
+        ).map { it.toByte() }.toByteArray()
     }
 
     override fun get(epc: String): ByteArray {
 //        sendEchonetPacket("get", epc, "")
         // ここに応答を待つ処理が入り、あれば応答をreturnする。
         // 応答は今のところByteArrayだが、もう少し分かりやすい形（esv等の形式？）にするかもしれない。
-        return listOf(0x10, 0x81, 0x00, 0x0A, 0x02, 0x91, 0x01, 0x71, 0x01, 0x80).map { it.toByte() }.toByteArray()
+        return listOf(
+            0x10,
+            0x81,
+            0x00,
+            0x0A,
+            0x02,
+            0x91,
+            0x01,
+            0x71,
+            0x01,
+            0x80
+        ).map { it.toByte() }.toByteArray()
     }
 }
 
