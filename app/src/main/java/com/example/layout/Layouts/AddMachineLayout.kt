@@ -1,21 +1,17 @@
-package com.example.layout
+package com.example.layout.Layouts
 
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
+import android.os.Parcelable
 import android.view.View
-import android.view.ViewGroup
 import android.widget.Button
-import android.widget.Switch
-import android.widget.TableRow
-import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.constraintlayout.widget.ConstraintSet
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.layout.ListAdapter
+import com.example.layout.ListItem
+import com.example.layout.R
 
-class DetailActivity : AppCompatActivity(), ListAdapter.OnSwitchClickListener {
+class AddMachineLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListener {
     private val data = mutableListOf(
         ListItem(1, "MainText1", "SubText1", true, "ON"),
         ListItem(2, "MainText2", "SubText2", false, "OFF"),
@@ -25,7 +21,7 @@ class DetailActivity : AppCompatActivity(), ListAdapter.OnSwitchClickListener {
     private lateinit var adapter: ListAdapter
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_detail)
+        setContentView(R.layout.activity_elect)
         val genebutton = findViewById<Button>(R.id.inc_button)
         recycView = findViewById<RecyclerView>(R.id.rccv)
         recycView.setHasFixedSize(true)
@@ -59,5 +55,17 @@ class DetailActivity : AppCompatActivity(), ListAdapter.OnSwitchClickListener {
         recycView.post { // ここでも変更するためpostを使用
             adapter.notifyItemChanged(position) //
         }
+    }
+
+    override fun onSaveInstanceState(savedInstanceState: Bundle) {
+        super.onSaveInstanceState(savedInstanceState)
+        savedInstanceState.putParcelableArrayList("data", ArrayList<Parcelable>(data))
+    }
+
+    override fun onRestoreInstanceState(savedInstanceState: Bundle) {
+        super.onRestoreInstanceState(savedInstanceState)
+        data.clear()
+        data.addAll(savedInstanceState.getParcelableArrayList<ListItem>("data")!!)
+        adapter.notifyDataSetChanged()
     }
 }
