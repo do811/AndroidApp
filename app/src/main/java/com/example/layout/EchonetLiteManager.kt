@@ -8,7 +8,8 @@ import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.SocketTimeoutException
 
-class EchonetLiteManager {
+class EchonetLiteManager (
+    private val assetManager: android.content.res.AssetManager){
     var deviceList: List<EchonetLiteObject<Number>> = mutableListOf()
         private set // 外部からの変更を許可しない
 
@@ -28,7 +29,7 @@ class EchonetLiteManager {
         deviceList = mutableListOf()
 
         val selfNodeInstanceList =
-            EchonetLiteObject(InetAddress.getByName("224.0.23.0"), listOf(0x0E, 0xF0, 0x01))
+            EchonetLiteObject(InetAddress.getByName("224.0.23.0"), listOf(0x0E, 0xF0, 0x01),assetManager)
         selfNodeInstanceList.get("selfNodeInstanceList")
 
         val socket = DatagramSocket(3610)
@@ -44,7 +45,7 @@ class EchonetLiteManager {
                         EchonetFormat.parsePacket(
                             packet,
                             byteArrayOf(0x00, 0x0A)
-                        )
+                        ),assetManager
                     )
                 println("応答を受け取りました:${list}\n")
                 deviceList = deviceList.plus(list)
@@ -167,7 +168,7 @@ class EchonetLiteManager {
      */
     suspend fun asyncWaitPacket(
         data: EchonetLitePacketData,
-        timeout: Int = 2000
+        timeout: Int = 2000,
     ): EchonetLitePacketData? {
         return withContext(Dispatchers.IO) {
             waitPacket(data, timeout)
@@ -188,15 +189,41 @@ fun main() {
 //    } // Hello, World! -> end -> Goodbye, World!
 
 
-//    val echonet = EchonetManager()
+//    val echonet = EchonetLiteManager()
 //    val monoLite = EchonetLiteObject(InetAddress.getByName("192.168.2.50"), listOf(0x02, 0x91, 0x01))
 //    println("here")
 //    println(echonet.waitPacket(monoLite.setC("power", "off")))
 
-    val echonet = EchonetLiteManager()
-    runBlocking {
-        echonet.asyncGetDeviceList()
-    }
+//    val echonet = EchonetLiteManager()
+//    runBlocking {
+//        val job = launch {
+//            echonet.asyncGetDeviceList()
+//            echonet.deviceList.forEach {
+//                println(it.asyncGet("power"))
+//            }
+//            println("len:"+echonet.deviceList.size)
+//        }
+//    }
+
+
+//    echonet.getDeviceList()
+//    echonet.deviceList.forEach {
+//        println(it.get("power"))
+//    }
+//    println("len:" + echonet.deviceList.size)
+
+//    runBlocking {
+//        echonet.asyncGetDeviceList()
+//        echonet.deviceList.forEach { it ->
+//            val ret = it.asyncGet("power")
+//            println("ret:"+ret)
+//        }
+//        println("len:"+echonet.deviceList.size)
+//    }
+
+//    val node = EchonetLiteObject(InetAddress.getByName("224.0.23.0"), listOf(0x0E, 0xF0, 0x01))
+//    println(echonet.waitPacket(node.get("selfNodeInstanceList")))
+
 
 }
 

@@ -2,26 +2,126 @@ package com.example.layout
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import java.io.InputStream
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
-import java.net.SocketTimeoutException
+import java.net.MulticastSocket
+import java.net.NetworkInterface
 
+/**
+ * exp. name["ja"] = "一般照明"
+ *      name["en"] = "General lighting"
+ */
+typealias LangDict = Map<String, String>
+
+const val PATH = "EchonetLiteData\\"
 
 /**
  * EchonetLiteObject
  * @param ipAddress IPアドレス 例："192.168.2.52"
  * @param eoj EOJ 3バイト 例：[0x02, 0x90, 0x01]
  */
-class EchonetLiteObject<T : Number>(val ipAddress: InetAddress, eoj: List<T>) : IEchonetLiteObject {
-    val eoj: List<Byte> = eoj.map { it.toByte() }
+class EchonetLiteObject<T : Number>(
+    val ipAddress: InetAddress, eoj: List<T>,
+    private val assetManager: android.content.res.AssetManager
+) : IEchonetLiteObject {
     // 参考：https://qiita.com/miyazawa_shi/items/725bc5eb6590be72970d
+
+    companion object {
+        fun indent(n: Int): String {
+            return "    ".repeat(n)
+        }
+    }
+
+    private val inputStream: InputStream
+    private val content: String
+    private val definitions: Map<String, DeviceJson.Companion.Data>
+
+    enum class DataType {
+        STATE, UNIMPLEMENTED
+    }
+
+    data class EnumData(
+        val edt: List<Byte>,
+        val name: String,
+        val descriptions: LangDict,
+    ) {
+        override fun toString(): String {
+            return "edt: 0x${edt.joinToString(" ") { "%02X".format(it) }}, name: $name, descriptions: $descriptions"
+        }
+
+        fun getIndentString(n: Int): List<String> {
+            val strList = mutableListOf<String>()
+            strList.add("${indent(n)}edt: 0x${edt.joinToString(" ") { "%02X".format(it) }}")
+            strList.add("${indent(n + 1)}name: $name")
+            strList.add("${indent(n + 1)}descriptions: ")
+            descriptions.forEach() { strList.add("${indent(n + 2)}${it.key} : ${it.value}") }
+            return strList
+        }
+    }
+
+    data class Property(
+        val epc: List<Byte>,
+        val name: LangDict,
+        val shortName: String,
+        val descriptions: LangDict,
+        val accessRule: DeviceJson.Companion.AccessRule,
+        val type: DataType,
+        val enumList: List<EnumData>?,
+        val status: EnumData? = null,
+    ) {
+        override fun toString(): String {
+            // 16進数で表示
+            return "epc: 0x${epc.joinToString(" ") { "%02X".format(it) }}, name: $name, shortName: $shortName, descriptions: $descriptions, accessRule: $accessRule, type: $type, enumList: $enumList, status: $status"
+        }
+
+        fun getIndentString(n: Int): List<String> {
+            val stringList = mutableListOf<String>()
+
+            stringList.add("${indent(n)}epc : 0x${epc.joinToString(" ") { "%02X".format(it) }}")
+
+            stringList.add("${indent(n + 1)}name : ")
+            name.forEach() { stringList.add("${indent(n + 2)}${it.key} : ${it.value}") }
+
+            stringList.add("${indent(n + 1)}shortName : $shortName")
+
+            stringList.add("${indent(n + 1)}descriptions : ")
+            descriptions.forEach() { stringList.add("${indent(n + 2)}${it.key} : ${it.value}") }
+
+            stringList.add("${indent(n + 1)}accessRule : ")
+            stringList.addAll(accessRule.getIndentString(n + 2))
+
+            stringList.add("${indent(n + 1)}type : $type")
+
+            if (enumList == null) {
+                stringList.add("${indent(n + 1)}enumList : null")
+            } else {
+                stringList.add("${indent(n + 1)}enumList : ")
+                enumList.forEach() { stringList.addAll(it.getIndentString(n + 2)) }
+            }
+
+            if (status == null) {
+                stringList.add("${indent(n + 1)}status : null")
+            } else {
+                stringList.add("${indent(n + 1)}status : ")
+                stringList.addAll(status.getIndentString(n + 2))
+            }
+
+            return stringList
+        }
+    }
+
+
+    val eoj: List<Byte>
+
+    val name: LangDict
+    val shortName: String
+    val propertyList: List<Property>
 
     private val controller = listOf(0x05.toByte(), 0xFF.toByte(), 0x01)
     private val echonetLitePort = 3610
-    val stringToEsv: MutableMap<String, Byte> = mutableMapOf()
-    val stringToEpc: MutableMap<String, List<Byte>> = mutableMapOf()
-    val stringToEdt: MutableMap<Pair<String, String>, List<Byte>> = mutableMapOf()
 
     // epc to edtの形
     // 例： status[0x80] = 0x30
@@ -29,47 +129,124 @@ class EchonetLiteObject<T : Number>(val ipAddress: InetAddress, eoj: List<T>) : 
     val status: MutableMap<Byte, Byte> = mutableMapOf()
 
     init {
+        inputStream = assetManager.open("definitions.json")
+        content = inputStream.bufferedReader().readText()
+//        definitions =
+//            Json.decodeFromString<DeviceJson.Companion.Definition>(content).definitions
+        val serializer = DeviceJson.Companion.Definition.serializer() // シリアライザを取得
+        definitions = Json.decodeFromString(serializer, content).definitions // デコード
+
         if (eoj.size != 3) {
             throw IllegalArgumentException("Echonet: eoj must be 3 bytes")
         }
+        this.eoj = eoj.map { it.toByte() }
 
-        stringToEsv["setI"] = 0x60
-        stringToEsv["setC"] = 0x61
-        stringToEsv["get"] = 0x62
+        // eojを用いてJsonからデータを取得
+        val device = DeviceJson.getDeviceFromEoj(this.eoj, this.assetManager)
+        // mapの初期化
+        name = mapOf(
+            "ja" to device.className.ja,
+            "en" to device.className.en,
+        )
+        shortName = device.shortName
+        propertyList = getProperties(device)
+//        println(propertyList.map { it }.joinToString("\n") { it.toString() })
+        println(getIndentPropertyInfo())
+    }
 
-        stringToEpc["power"] = listOf(0x80.toByte())
-
-        stringToEdt["power" to "on"] = listOf(0x30)
-        stringToEdt["power" to "off"] = listOf(0x31)
-
-        // eojによって使用可能なepc, edtを変更
-        when {
-            this.eoj[0] == 0x02.toByte() && this.eoj[1] == 0x91.toByte() -> monoLite()
-            this.eoj[0] == 0x0E.toByte() && this.eoj[1] == 0xF0.toByte() -> nodeProfile()
+    /**
+     * インデント済みのプロパティ情報が書かれた文字列を取得する
+     * @param n 元々のインデントの数（インデントの空白数ではない）
+     * @return インデント済みのプロパティ情報
+     */
+    fun getIndentPropertyInfo(n: Int = 0): String {
+        return propertyList.joinToString("\n----------------------------------------------\n") {
+            it.getIndentString(n).joinToString("\n")
         }
     }
 
-    private fun monoLite() {
-        println("monoLite")
-        stringToEpc["liteLevel"] = listOf(0xB0.toByte())
-        stringToEdt["liteLevel" to "0"] = listOf(0x00)
-        stringToEdt["liteLevel" to "10"] = listOf(0x0A)
-        stringToEdt["liteLevel" to "20"] = listOf(0x14)
-        stringToEdt["liteLevel" to "30"] = listOf(0x1E)
-        stringToEdt["liteLevel" to "40"] = listOf(0x28)
-        stringToEdt["liteLevel" to "50"] = listOf(0x32)
-        stringToEdt["liteLevel" to "60"] = listOf(0x3C)
-        stringToEdt["liteLevel" to "70"] = listOf(0x46)
-        stringToEdt["liteLevel" to "80"] = listOf(0x50)
-        stringToEdt["liteLevel" to "90"] = listOf(0x5A)
-        stringToEdt["liteLevel" to "100"] = listOf(0x64)
-    }
+    /**
+     * Deviceに対応するPropertyのリストを取得する
+     * @param device Device
+     * @return List<Property>
+     */
+    private fun getProperties(device: DeviceJson.Companion.Device): List<Property> {
+        return device.elProperties.map { property ->
+            // epcの"0x"を取り除く
+            val epc = when (property.epc.substring(0, 2)) {
+                "0x" -> property.epc.substring(2).hexStringToByteArray().toList()
+                else -> property.epc.hexStringToByteArray().toList()
+            }
 
-    private fun nodeProfile() {
-        stringToEpc["power"] = listOf(0x80.toByte())
-        stringToEdt["power" to "on"] = listOf(0x30)
-        stringToEdt["power" to "off"] = listOf(0x31)
-        stringToEpc["selfNodeInstanceList"] = listOf(0xD6.toByte())
+            val name: LangDict = mapOf(
+                "ja" to property.propertyName.ja,
+                "en" to property.propertyName.en,
+            )
+
+            val descriptions: LangDict = mapOf(
+                "ja" to property.descriptions.ja,
+                "en" to property.descriptions.en,
+            )
+
+            val type = when {
+                property.data.ref != null -> {
+                    // refがある場合はdefinitionsを参照する
+                    // #/definitions/state_ON-OFF_3031のうち、state_ON-OFF_3031を取り出す
+                    val refName = property.data.ref.split("/").last()
+                    val refType = definitions[refName]?.type
+                    when (refType) {
+                        "state" -> DataType.STATE
+                        else -> DataType.UNIMPLEMENTED
+                    }
+                }
+
+                property.data.type != null -> {
+                    // refがない場合はdata.typeを参照する
+                    when (property.data.type) {
+                        "state" -> DataType.STATE
+                        else -> DataType.UNIMPLEMENTED
+                    }
+                }
+
+                else -> DataType.UNIMPLEMENTED
+            }
+
+            val enumDataList: List<EnumData>? = when (type) {
+                DataType.STATE -> {
+                    // refがある場合はdefinitionsを参照する
+                    // refがない場合はdata.enumを見る
+                    val ref = property.data.ref?.split("/")?.last()
+                    val enums = definitions[ref]?.enum ?: property.data.enum
+
+                    // enumの整形
+                    enums?.map { enum ->
+//                        if (enum is DeviceJson.Companion.EnumOrInt.Enum_) {
+                        val edt = when (enum.edt.substring(0, 2)) {
+                            // epcの"0x"を取り除く
+                            "0x" -> enum.edt.substring(2).hexStringToByteArray().toList()
+                            else -> enum.edt.hexStringToByteArray().toList()
+                        }
+                        EnumData(
+                            edt, enum.name ?: "", mapOf(
+                                "ja" to (enum.descriptions?.ja ?: ""),
+                                "en" to (enum.descriptions?.en ?: ""),
+                            )
+                        )
+//                        } else {
+//                            // type == "number"の場合にEnumOrIntはIntegerになるっぽい？
+//                            // 今のところdefinitionsの"number_1-20-21-22-23-24"のみが該当
+//                            throw IllegalArgumentException("Echonet: enum is not Enum_ but Integer")
+//                        }
+                    }
+                }
+
+                else -> null
+            }
+
+            Property(
+                epc, name, property.shortName, descriptions, property.accessRule, type, enumDataList
+            )
+        }
     }
 
     // 既存クラスへの追加メソッドたち
@@ -87,56 +264,101 @@ class EchonetLiteObject<T : Number>(val ipAddress: InetAddress, eoj: List<T>) : 
         return null
     }
 
-    fun printStatus() {
-//        val status = status.map { (k, v) -> "${stringToEpc.getKey(listOf(k))}: ${stringToEdt.getKey(listOf(v))}" }
-//            .joinToString(", ")
-        val status = status.map { (k, v) -> "${stringToEdt.getKey(listOf(v))}" }
-            .joinToString(", ")
-        println(status)
-    }
+//    fun printStatus() {
+////        val status = status.map { (k, v) -> "${stringToEpc.getKey(listOf(k))}: ${stringToEdt.getKey(listOf(v))}" }
+////            .joinToString(", ")
+//        val status = status.map { (_, v) -> "${stringToEdt.getKey(listOf(v))}" }.joinToString(", ")
+//        println(status)
+//    }
 
-    override fun sendEchonetPacket(esv: String, epc: String, edt: String): DatagramPacket {
-        // esv, epcはnullチェックをする。edtはnullでもよい
-        val esvValue = stringToEsv[esv] ?: throw IllegalArgumentException("Echonet: esv is null")
-        val epcValue = stringToEpc[epc] ?: throw IllegalArgumentException("Echonet: epc is null")
-        val packet = EchonetFormat.makePacket(
-            EchonetLitePacketData(
-                InetAddress.getLocalHost(),
-                listOf(0x00, 0x0A.toByte()),
-                controller,
-                this.eoj,
-                esvValue,
-                epcValue,
-                stringToEdt[epc to edt]
-            )
+    override fun sendEchonetPacket(esv: ESV, epc: String, edt: String): DatagramPacket {
+        val esvValue = when (esv) {
+            ESV.SETI -> 0x60.toByte()
+            ESV.SETC -> 0x61.toByte()
+            ESV.GET -> 0x62.toByte()
+        }
+        // @formatter:off
+        val epcValue = propertyList.find { it.name["ja"] == epc }?.epc
+            ?: throw IllegalArgumentException("Echonet: epc is null")
+        // @formatter:on
+        val edtValue = when (edt) {
+            "" -> null
+            // edtが見つからない場合
+            else -> propertyList.find { it.name["ja"] == epc }?.enumList?.find { it.name == edt }?.edt
+                ?: throw IllegalArgumentException("Echonet: Unknown edt: $edt")
+        }
+
+        val packet = EchonetFormat.makePacket(EchonetLitePacketData(InetAddress.getLocalHost(),
+            listOf(0x00, 0x0A.toByte()),
+            controller,
+            this.eoj,
+            esvValue,
+            epcValue,
+            propertyList.find { it.name["ja"] == epc }?.enumList?.find { it.name == edt }?.edt
+        )
         )
 
-        println(packet.toHexString())
+        println(packet.joinToString(", ") { "%02X".format(it) })
 
-        val sendUdpSocket = DatagramSocket()
         val sendPacket = DatagramPacket(packet, packet.size, ipAddress, echonetLitePort)
-        sendUdpSocket.send(sendPacket)
-        sendUdpSocket.close()
+        if (ipAddress.isMulticastAddress) {
+            val interfaces = NetworkInterface.getNetworkInterfaces().toList()
+            for (networkInterface in interfaces) {
+                if (!networkInterface.supportsMulticast()) {
+                    continue
+                }
+
+                val multicastSocket = MulticastSocket()
+                multicastSocket.networkInterface = networkInterface
+                multicastSocket.send(sendPacket)
+                multicastSocket.close()
+                break
+            }
+        } else {
+            val sendUdpSocket = DatagramSocket()
+            sendUdpSocket.send(sendPacket)
+            sendUdpSocket.close()
+        }
         println("送信完了")
         println("to: $ipAddress")
+
         return sendPacket
     }
 
+    fun compareDatagramPackets(packet1: DatagramPacket, packet2: DatagramPacket): Boolean {
+        // データの比較
+        if (!packet1.data.contentEquals(packet2.data)) {
+            println("data")
+            return false
+        }
+        // アドレスの比較
+        if (packet1.address != packet2.address) {
+            println("address")
+            return false
+        }
+        // ポートの比較
+        if (packet1.port != packet2.port) {
+            println("port")
+            return false
+        }
+        return true
+    }
+
     override fun setI(epc: String, edt: String): EchonetLitePacketData {
-        return EchonetFormat.parsePacket(sendEchonetPacket("setI", epc, edt))
+        return EchonetFormat.parsePacket(sendEchonetPacket(ESV.SETI, epc, edt))
     }
 
     override fun setC(epc: String, edt: String, timeout: Int): EchonetLitePacketData {
-        return EchonetFormat.parsePacket(sendEchonetPacket("setC", epc, edt))
+        return EchonetFormat.parsePacket(sendEchonetPacket(ESV.SETC, epc, edt))
     }
 
     override fun get(epc: String): EchonetLitePacketData {
-        return EchonetFormat.parsePacket(sendEchonetPacket("get", epc, ""))
+        return EchonetFormat.parsePacket(sendEchonetPacket(ESV.GET, epc, ""))
     }
 
     override fun toString(): String {
         val status = status.map { (k, v) -> "$k: $v" }.joinToString(", ")
-        return "{ip: $ipAddress, EOJ:${eoj.joinToString(" ") { "%02X".format(it) }}, status: $status}"
+        return "{ip: $ipAddress, EOJ:0x${eoj.joinToString(" ") { "%02X".format(it) }}, status: $status}"
     }
 
     suspend fun asyncSetI(epc: String, edt: String): EchonetLitePacketData {
@@ -158,11 +380,8 @@ class EchonetLiteObject<T : Number>(val ipAddress: InetAddress, eoj: List<T>) : 
     }
 }
 
-//class EchonetStatus(val ipAddress: InetAddress, val eoj: List<Byte>) {
-//    var status: MutableMap<String, String> = mutableMapOf()
-//}
-
 fun main() {
+
     // ipアドレスが192.168.2.52で、EOJが0x029001（単機能照明）のEchonetLiteオブジェクトを作成
     // 電源をONにし、明るさを100%に設定
 //    val monoLite = StubEchonetObject("192.168.0.22", listOf(0x02, 0x90, 0x01))
@@ -173,13 +392,12 @@ fun main() {
 
     // ipアドレスが224.0.23.0で、EOJが0x0EF001（ノードプロファイル）のEchonetLiteオブジェクトを作成
     // 224.0.23.0はマルチキャストアドレス
-    val selfNodeInstanceList =
-        EchonetLiteObject(InetAddress.getByName("224.0.23.0"), listOf(0x0E, 0xF0.toByte(), 0x01))
-    println(selfNodeInstanceList)
-    println()
+//    val selfNodeInstanceList = EchonetLiteObject(InetAddress.getByName("224.0.23.0"), listOf(0x0E, 0xF0.toByte(), 0x01))
+//    println(selfNodeInstanceList)
+//    println()
     // selfNodeInstanceListを取得すると、自分の持っているEOJのリストが返ってくる
     // つまり、ネットワーク内の全てのEchonetLiteオブジェクトのリストが返ってくる
-    println(selfNodeInstanceList.get("selfNodeInstanceList"))
+//    println(selfNodeInstanceList.get("selfNodeInstanceList"))
     // 取得した後解析してオブジェクトのリストを作成する処理が必要。未実装
 
     //  ip  :224.0.23.0
@@ -199,27 +417,33 @@ fun main() {
     //  [1]~[12]:[02,90,xx]つまり一般照明が4個
     //  [13]~[15]:[02,A3,xx]つまりシステム照明が1個
 
-    val socket = DatagramSocket(3610)
-    socket.soTimeout = 100
-    val buf = ByteArray(1024)
-    val packet = DatagramPacket(buf, buf.size)
+//    val socket = DatagramSocket(3610)
+//    socket.soTimeout = 100
+//    val buf = ByteArray(1024)
+//    val packet = DatagramPacket(buf, buf.size)
+//
+//    for (i in 1..20) {
+//        try {
+//            socket.receive(packet)
+//            val list = EchonetFormat.parseSelfNodeInstanceList(
+//                EchonetFormat.parsePacket(
+//                    packet, byteArrayOf(0x00, 0x0A)
+//                )
+//            )
+//            println("応答を受け取りました:${list}\n")
+//
+//        } catch (_: SocketTimeoutException) {
+//        }
+//    }
+//    socket.close()
 
-    for (i in 1..20) {
-        try {
-            socket.receive(packet)
-            val list =
-                EchonetFormat.parseSelfNodeInstanceList(
-                    EchonetFormat.parsePacket(
-                        packet,
-                        byteArrayOf(0x00, 0x0A)
-                    )
-                )
-            println("応答を受け取りました:${list}\n")
+//    val echonet = EchonetLiteManager()
+//    val a = EchonetLiteObject(InetAddress.getByName("192.168.2.50"), listOf(0x02, 0x91, 0x01))
+//    println(echonet.waitPacket(a.get("動作状態")))
+//    println(echonet.waitPacket(a.setC("動作状態", "false")))
+//    val b = EchonetLiteObject(InetAddress.getByName("224.0.23.0"), listOf(0x0E, 0xF0, 0x01))
+//    println(echonet.waitPacket(b.get("自ノードインスタンスリストS")))
 
-        } catch (_: SocketTimeoutException) {
-        }
-    }
-    socket.close()
 }
 
 // 非同期で常に通信を読んでおく

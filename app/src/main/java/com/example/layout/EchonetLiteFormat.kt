@@ -77,7 +77,10 @@ class EchonetFormat {
             return EchonetLitePacketData(packet.address, tid, seoj, deoj, esv, epc, edt)
         }
 
-        fun parseSelfNodeInstanceList(data: EchonetLitePacketData): List<EchonetLiteObject<Number>> {
+        fun parseSelfNodeInstanceList(
+            data: EchonetLitePacketData,
+            assetManager: android.content.res.AssetManager
+        ): List<EchonetLiteObject<Number>> {
             if (data.esv != 0x72.toByte()) {
                 throw IllegalArgumentException("Echonet: esv is not 0x72")
             }
@@ -88,7 +91,7 @@ class EchonetFormat {
                 list.add(
                     EchonetLiteObject(
                         data.ipAddress,
-                        edt.slice(1 + (i - 1) * 3 until 1 + i * 3)
+                        edt.slice(1 + (i - 1) * 3 until 1 + i * 3), assetManager
                     )
                 )
             }
@@ -97,9 +100,10 @@ class EchonetFormat {
 
         fun parseSelfNodeInstanceList(
             packet: DatagramPacket,
-            collectTid: ByteArray?
+            collectTid: ByteArray?,
+            assetManager: android.content.res.AssetManager
         ): List<EchonetLiteObject<Number>> {
-            return parseSelfNodeInstanceList(parsePacket(packet, collectTid))
+            return parseSelfNodeInstanceList(parsePacket(packet, collectTid), assetManager)
         }
     }
 }

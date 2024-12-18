@@ -10,7 +10,7 @@ interface IEchonetLiteObject {
      * @param edt これはnullでもよい
      * @return 送信したパケット
      */
-    fun sendEchonetPacket(esv: String, epc: String, edt: String): DatagramPacket
+    fun sendEchonetPacket(esv: ESV, epc: String, edt: String): DatagramPacket
 
     /**
      * 任意のEPCのEDTをセットする 応答を受け取らない
