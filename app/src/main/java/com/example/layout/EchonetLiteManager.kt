@@ -1,3 +1,5 @@
+package com.example.layout
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.DatagramPacket
@@ -5,16 +7,19 @@ import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.SocketTimeoutException
 
-class EchonetManager {
-    var deviceList: List<EchonetObject<Number>> = mutableListOf()
-        private set // デバイスリストは外部からの変更を許可しない
-
-    private val timeout = 4000
+class EchonetLiteManager(
+    private val assetManager: android.content.res.AssetManager
+) {
     private val echonetLitePort = 3610
+    val TID = listOf(0x09, 0x29.toByte())
+    var deviceList: List<EchonetLiteObject<Number>> = mutableListOf()
+        private set // 外部からの変更を許可しない
 
+    // getDeviseListのタイムアウト時間。外部から変更可能
+    var timeout = 4000
     val packetList: ArrayDeque<EchonetLitePacketData> = ArrayDeque()
-
-    private var isReading = false
+    var isReading = false
+        private set // 外部からの変更を許可しない
 
     init {
 //        getDeviceList()
@@ -23,8 +28,13 @@ class EchonetManager {
     fun getDeviceList() {
         deviceList = mutableListOf()
 
-        val selfNodeInstanceList = EchonetObject(InetAddress.getByName("224.0.23.0"), listOf(0x0E, 0xF0, 0x01))
-        selfNodeInstanceList.get("selfNodeInstanceList")
+        val selfNodeInstanceList =
+            EchonetLiteObject(
+                InetAddress.getByName("224.0.23.0"),
+                listOf(0x0E, 0xF0, 0x01),
+                assetManager
+            )
+        selfNodeInstanceList.get("自ノードインスタンスリストS")
 
         val socket = DatagramSocket(3610)
         socket.soTimeout = 100
@@ -35,10 +45,15 @@ class EchonetManager {
             try {
                 socket.receive(packet)
                 val list =
-                    EchonetFormat.parseSelfNodeInstanceList(EchonetFormat.parsePacket(packet, byteArrayOf(0x00, 0x0A)))
+                    EchonetFormat.parseSelfNodeInstanceList(
+                        EchonetFormat.parsePacket(
+                            packet,
+                            TID
+                        ), assetManager
+                    )
                 println("応答を受け取りました:${list}\n")
                 deviceList = deviceList.plus(list)
-            } catch (_: SocketTimeoutException) {
+            } catch (_: Exception) { // SocketTimeoutExceptionまたはIllegalArgumentException（jsonがない場合）
 //                println("timeout")
             }
         }
@@ -55,7 +70,7 @@ class EchonetManager {
         }
     }
 
-    fun readPacket() {
+    private fun readPacket() {
         this.isReading = true
         val socket = DatagramSocket(echonetLitePort)
         socket.soTimeout = 100
@@ -66,9 +81,9 @@ class EchonetManager {
             try {
                 socket.receive(packet)
 
-                val recv = EchonetFormat.parsePacket(packet, byteArrayOf(0x00, 0x0A))
-//                println(recv)
-                packetList.add(recv)
+                val response = EchonetFormat.parsePacket(packet, TID)
+//                println(response)
+                packetList.add(response)
             } catch (_: SocketTimeoutException) {
             } catch (_: IllegalArgumentException) {
                 println("TIDが違います")
@@ -79,6 +94,7 @@ class EchonetManager {
 
     suspend fun asyncReadPacket() {
         withContext(Dispatchers.IO) {
+            if (isReading) return@withContext
             readPacket()
         }
     }
@@ -97,7 +113,13 @@ class EchonetManager {
         val seoj = data.deoj
         val deoj = data.seoj
         if (data.esv != 0x61.toByte() && data.esv != 0x62.toByte()) {
-            throw IllegalArgumentException("Echonet: esv is not 0x61 or 0x71 but ${"%02X".format(data.esv)}")
+            throw IllegalArgumentException(
+                "Echonet: esv is not 0x61 or 0x71 but ${
+                    "%02X".format(
+                        data.esv
+                    )
+                }"
+            )
         }
         val esv = if (data.esv == 0x61.toByte()) 0x71.toByte() else 0x72.toByte()
 
@@ -110,27 +132,27 @@ class EchonetManager {
             try {
                 socket.receive(packet)
 
-                val recv = EchonetFormat.parsePacket(packet, byteArrayOf(0x00, 0x0A))
-//                println(recv)
+                val response = EchonetFormat.parsePacket(packet, TID)
+//                println(response)
 
-                if (recv.tid != tid) {
+                if (response.tid != tid) {
                     println("TIDが違います")
                     continue
                 }
-                if (recv.seoj != seoj) {
+                if (response.seoj != seoj) {
                     println("SEOJが違います")
                     continue
                 }
-                if (recv.deoj != deoj) {
+                if (response.deoj != deoj) {
                     println("DEOJが違います")
                     continue
                 }
-                if (recv.esv != esv) {
+                if (response.esv != esv) {
                     println("ESVが違います")
                     continue
                 }
 
-                returnValue = recv
+                returnValue = response
                 break
             } catch (_: SocketTimeoutException) {
             } catch (_: IllegalArgumentException) {
@@ -149,7 +171,10 @@ class EchonetManager {
      * @param timeout: Int
      * @return EchonetLitePacketData?
      */
-    suspend fun asyncWaitPacket(data: EchonetLitePacketData, timeout: Int = 2000): EchonetLitePacketData? {
+    suspend fun asyncWaitPacket(
+        data: EchonetLitePacketData,
+        timeout: Int = 2000,
+    ): EchonetLitePacketData? {
         return withContext(Dispatchers.IO) {
             waitPacket(data, timeout)
         }
@@ -157,7 +182,6 @@ class EchonetManager {
 }
 
 fun main() {
-    val manager = EchonetManager()
     // runBlocking はCoroutineBuilderの一つで、None-Coroutineの世界からCoroutineの世界へのエントリポイント
     // None-Coroutineの世界でlaunchなどのCoroutineBuilderは使えない
 //    runBlocking {
@@ -170,54 +194,41 @@ fun main() {
 //    } // Hello, World! -> end -> Goodbye, World!
 
 
-//    EchonetManager()
+//    val echonet = EchonetLiteManager()
+//    val monoLite = EchonetLiteObject(InetAddress.getByName("192.168.2.50"), listOf(0x02, 0x91, 0x01))
+//    println("here")
+//    println(echonet.waitPacket(monoLite.setC("power", "off")))
 
-    // ip: /192.168.2.50, EOJ:02 91 01
-//    val monoLite = EchonetObject(InetAddress.getByName("192.168.2.50"), listOf(0x02, 0x91, 0x01))
-//    monoLite.get("power")
-//
-//    val timeout = 2000
-//    val socket = DatagramSocket(3610)
-//    socket.soTimeout = 100
-//    val buf = ByteArray(1024)
-//    val packet = DatagramPacket(buf, buf.size)
-//
-//    for (i in 1..timeout / socket.soTimeout) {
-//        try {
-//            socket.receive(packet)
-//
-//            val data = EchonetFormat.parsePacket(packet, byteArrayOf(0x00, 0x0A))
-//            println("応答を受け取りました:${data}\n")
-//            monoLite.status[0x80.toByte()] = data.edt?.get(0) ?: 0x00.toByte()
-//
-//        } catch (_: SocketTimeoutException) {
-//        } catch (_: IllegalArgumentException) {
-//            println("TIDが違います")
+//    val echonet = EchonetLiteManager()
+//    runBlocking {
+//        val job = launch {
+//            echonet.asyncGetDeviceList()
+//            echonet.deviceList.forEach {
+//                println(it.asyncGet("power"))
+//            }
+//            println("len:"+echonet.deviceList.size)
 //        }
 //    }
-//
-//    monoLite.get("liteLevel")
-//
-//    for (i in 1..timeout / socket.soTimeout) {
-//        try {
-//            socket.receive(packet)
-//            val data = EchonetFormat.parsePacket(packet, byteArrayOf(0x00, 0x0A))
-//            println("応答を受け取りました:${data}\n")
-//            monoLite.status[0xB0.toByte()] = data.edt?.get(0) ?: 0x00.toByte()
-//
-//        } catch (_: SocketTimeoutException) {
-//        } catch (_: IllegalArgumentException) {
-//            println("TIDが違います")
-//        }
+
+
+//    echonet.getDeviceList()
+//    echonet.deviceList.forEach {
+//        println(it.get("power"))
 //    }
-//    socket.close()
-//
-//    monoLite.printStatus()
+//    println("len:" + echonet.deviceList.size)
 
+//    runBlocking {
+//        echonet.asyncGetDeviceList()
+//        echonet.deviceList.forEach { it ->
+//            val ret = it.asyncGet("power")
+//            println("ret:"+ret)
+//        }
+//        println("len:"+echonet.deviceList.size)
+//    }
 
-    val monoLite = EchonetObject(InetAddress.getByName("192.168.2.50"), listOf(0x02, 0x91, 0x01))
-    println("aaaaa")
-    println(manager.waitPacket(monoLite.setC("power", "off")))
+//    val node = EchonetLiteObject(InetAddress.getByName("224.0.23.0"), listOf(0x0E, 0xF0, 0x01))
+//    println(echonet.waitPacket(node.get("selfNodeInstanceList")))
+
 
 }
 

@@ -1,12 +1,13 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android") version "1.9.0"
+    kotlin("plugin.serialization") version "1.6.0"
     id("kotlin-parcelize")
 }
 
 android {
     namespace = "com.example.layout"
-    compileSdk = 34
+    compileSdk = 34 // 35?
 
     defaultConfig {
         applicationId = "com.example.layout"
@@ -36,6 +37,7 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
+    buildToolsVersion = "35.0.0"
 }
 
 dependencies {
@@ -48,4 +50,5 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
 }
