@@ -7,16 +7,17 @@ import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.SocketTimeoutException
 
-class EchonetLiteManager (
-    private val assetManager: android.content.res.AssetManager){
+class EchonetLiteManager(
+    private val assetManager: android.content.res.AssetManager
+) {
+    private val echonetLitePort = 3610
+    val TID = listOf(0x09, 0x29.toByte())
     var deviceList: List<EchonetLiteObject<Number>> = mutableListOf()
         private set // 外部からの変更を許可しない
 
-    private val timeout = 4000
-    private val echonetLitePort = 3610
-
+    // getDeviseListのタイムアウト時間。外部から変更可能
+    var timeout = 4000
     val packetList: ArrayDeque<EchonetLitePacketData> = ArrayDeque()
-
     var isReading = false
         private set // 外部からの変更を許可しない
 
@@ -28,7 +29,11 @@ class EchonetLiteManager (
         deviceList = mutableListOf()
 
         val selfNodeInstanceList =
-            EchonetLiteObject(InetAddress.getByName("224.0.23.0"), listOf(0x0E, 0xF0, 0x01),assetManager)
+            EchonetLiteObject(
+                InetAddress.getByName("224.0.23.0"),
+                listOf(0x0E, 0xF0, 0x01),
+                assetManager
+            )
         selfNodeInstanceList.get("自ノードインスタンスリストS")
 
         val socket = DatagramSocket(3610)
@@ -43,8 +48,8 @@ class EchonetLiteManager (
                     EchonetFormat.parseSelfNodeInstanceList(
                         EchonetFormat.parsePacket(
                             packet,
-                            byteArrayOf(0x00, 0x0A)
-                        ),assetManager
+                            TID
+                        ), assetManager
                     )
                 println("応答を受け取りました:${list}\n")
                 deviceList = deviceList.plus(list)
@@ -65,7 +70,7 @@ class EchonetLiteManager (
         }
     }
 
-    fun readPacket() {
+    private fun readPacket() {
         this.isReading = true
         val socket = DatagramSocket(echonetLitePort)
         socket.soTimeout = 100
@@ -76,7 +81,7 @@ class EchonetLiteManager (
             try {
                 socket.receive(packet)
 
-                val response = EchonetFormat.parsePacket(packet, byteArrayOf(0x00, 0x0A))
+                val response = EchonetFormat.parsePacket(packet, TID)
 //                println(response)
                 packetList.add(response)
             } catch (_: SocketTimeoutException) {
@@ -89,6 +94,7 @@ class EchonetLiteManager (
 
     suspend fun asyncReadPacket() {
         withContext(Dispatchers.IO) {
+            if (isReading) return@withContext
             readPacket()
         }
     }
@@ -126,7 +132,7 @@ class EchonetLiteManager (
             try {
                 socket.receive(packet)
 
-                val response = EchonetFormat.parsePacket(packet, byteArrayOf(0x00, 0x0A))
+                val response = EchonetFormat.parsePacket(packet, TID)
 //                println(response)
 
                 if (response.tid != tid) {

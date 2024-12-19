@@ -117,6 +117,7 @@ class EchonetLiteObject<T : Number>(
 
     private val controller = listOf(0x05.toByte(), 0xFF.toByte(), 0x01)
     private val echonetLitePort = 3610
+    val TID = listOf(0x09, 0x29.toByte())
 
     // epc to edtの形
     // 例： status[0x80] = 0x30
@@ -315,7 +316,7 @@ class EchonetLiteObject<T : Number>(
         }
         return EchonetLitePacketData(
             InetAddress.getLocalHost(),
-            listOf(0x00, 0x0A.toByte()),
+            TID,
             controller,
             this.eoj,
             esvValue,

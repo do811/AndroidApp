@@ -38,7 +38,7 @@ class EchonetFormat {
          */
         fun parsePacket(
             packet: DatagramPacket,
-            collectTid: ByteArray? = null
+            collectTid: List<Byte>? = null
         ): EchonetLitePacketData {
             val data = packet.data
             if (data.size < 12) {
@@ -100,7 +100,7 @@ class EchonetFormat {
 
         fun parseSelfNodeInstanceList(
             packet: DatagramPacket,
-            collectTid: ByteArray?,
+            collectTid: List<Byte>?,
             assetManager: android.content.res.AssetManager
         ): List<EchonetLiteObject<Number>> {
             return parseSelfNodeInstanceList(parsePacket(packet, collectTid), assetManager)
