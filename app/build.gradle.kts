@@ -1,6 +1,6 @@
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android") version "1.9.0"
+    id("org.jetbrains.kotlin.android") version "2.1.0"
     kotlin("plugin.serialization") version "1.6.0"
     id("kotlin-parcelize")
 }
