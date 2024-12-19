@@ -184,7 +184,8 @@ class DeviceJson {
         fun getDeviceFromEoj(
             eoj: List<Byte>,
             assetManager: android.content.res.AssetManager
-        ): Device {
+        ): Device? {
+//            println("opening:${"0x${eoj.joinToString("") { "%02X".format(it) }}.json"}")
             if (eoj.size == 3) {
                 // インスタンスコードがある場合は削除
                 return getDeviceFromEoj(eoj.dropLast(1), assetManager)
@@ -202,14 +203,19 @@ class DeviceJson {
          * @return Device
          * @throws IllegalArgumentException ファイルが見つからない場合
          */
-        fun getDeviceFromEoj(eoj: String, assetManager: android.content.res.AssetManager): Device {
+        fun getDeviceFromEoj(eoj: String, assetManager: android.content.res.AssetManager): Device? {
 //            val file = Device::class.java.getResource(PATH + "0x${eoj}.json")
 //                ?: throw IllegalArgumentException("File not found: 0x${eoj}.json")
 
-            val inputStream = assetManager.open("0x${eoj}.json")
-            val content = inputStream.bufferedReader().readText()
-            val serializer = Device.serializer() // シリアライザを取得
-            return Json.decodeFromString(serializer, content)
+            try {
+                val inputStream = assetManager.open("0x${eoj}.json")
+
+                val content = inputStream.bufferedReader().readText()
+                val serializer = Device.serializer() // シリアライザを取得
+                return Json.decodeFromString(serializer, content)
+            } catch (e: Exception) {
+                return null
+            }
         }
     }
 }

@@ -1,7 +1,6 @@
 package com.example.layout
 
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -30,7 +29,7 @@ class EchonetLiteManager (
 
         val selfNodeInstanceList =
             EchonetLiteObject(InetAddress.getByName("224.0.23.0"), listOf(0x0E, 0xF0, 0x01),assetManager)
-        selfNodeInstanceList.get("selfNodeInstanceList")
+        selfNodeInstanceList.get("自ノードインスタンスリストS")
 
         val socket = DatagramSocket(3610)
         socket.soTimeout = 100
@@ -49,7 +48,7 @@ class EchonetLiteManager (
                     )
                 println("応答を受け取りました:${list}\n")
                 deviceList = deviceList.plus(list)
-            } catch (_: SocketTimeoutException) {
+            } catch (_: Exception) { // SocketTimeoutExceptionまたはIllegalArgumentException（jsonがない場合）
 //                println("timeout")
             }
         }

@@ -40,6 +40,9 @@ class MainActivity : AppCompatActivity() {
             this@MainActivity,
             detail::class.java
         )
+
+        val echonet = EchonetLiteManager(resources.assets)
+
         button.setOnClickListener {
             startActivity(intent2secondsc)
         }
@@ -50,40 +53,30 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent2secondsc)
         }
         button3.setOnClickListener {
-            val echonet = EchonetLiteManager(resources.assets)
             lifecycleScope.launch {
-
-//                echonet.asyncGetDeviceList()
-//                echonet.deviceList.forEach { it ->
-//                    val ret = it.asyncGet("power")
-//                    println("ret:"+ret)
-//                }
-//                println("len:"+echonet.deviceList.size)
-
                 val a = EchonetLiteObject(
-                    InetAddress.getByName("192.168.2.50"),
-                    listOf(0x02, 0x91, 0x01),
+                    InetAddress.getByName("192.168.2.118"),
+                    listOf(0x02, 0x90, 0x01),
                     resources.assets
                 )
-                println(echonet.asyncWaitPacket(a.asyncSetC("動作状態","true")))
-//    println(echonet.waitPacket(a.setC("動作状態", "false")))
-//                val b = EchonetLiteObject(
-//                    InetAddress.getByName("224.0.23.0"),
-//                    listOf(0x0E, 0xF0, 0x01), resources.assets
-//                )
-//                println(echonet.asyncWaitPacket(b.asyncGet("自ノードインスタンスリストS")))
+                val ret =
+                    a.asyncGet("動作状態")?.let { it1 -> echonet.asyncWaitPacket(it1) }
+                if (ret == null) {
+                    return@launch
+                }
+                println(ret)
+                print(a.epcToString(ret.epc) + ":")
+                println(ret.edt?.let { it1 -> a.edtToString(ret.epc, it1) })
             }
         }
         button4.setOnClickListener {
-            val echonet = EchonetLiteManager(resources.assets)
             lifecycleScope.launch {
-
-//                echonet.asyncGetDeviceList()
-//                echonet.deviceList.forEach { it ->
-//                    val ret = it.asyncGet("power")
-//                    println("ret:"+ret)
-//                }
-//                println("len:"+echonet.deviceList.size)
+                echonet.asyncGetDeviceList()
+                echonet.deviceList.forEach { it ->
+                    val ret = it.asyncGet("動作状態")
+                    println("ret:$ret")
+                }
+                println("len:" + echonet.deviceList.size)
 
 //                val a = EchonetLiteObject(
 //                    InetAddress.getByName("192.168.2.50"),
@@ -91,22 +84,23 @@ class MainActivity : AppCompatActivity() {
 //                    resources.assets
 //                )
 //                println(echonet.asyncWaitPacket(a.asyncSetC("動作状態","false")))
-//    println(echonet.waitPacket(a.setC("動作状態", "false")))
-                val b = EchonetLiteObject(
-                    InetAddress.getByName("224.0.23.0"),
-                    listOf(0x0E, 0xF0, 0x01), resources.assets
-                )
-                println(echonet.asyncWaitPacket(b.asyncGet("自ノードインスタンスリストS")))
+
+//                val b = EchonetLiteObject(
+//                    InetAddress.getByName("224.0.23.0"),
+//                    listOf(0x0E, 0xF0, 0x01), resources.assets
+//                )
+//                println(b.asyncGet("自ノードインスタンスリストS")
+//                    ?.let { it1 -> echonet.asyncWaitPacket(it1) })
             }
         }
 
-        val interfaces = NetworkInterface.getNetworkInterfaces().toList()
-        for (networkInterface in interfaces) {
-            println("インターフェース名: ${networkInterface.name}")
-            println("ディスプレイ名: ${networkInterface.displayName}")
-            println("インターフェースの詳細: ${networkInterface.inetAddresses.toList()}")
-            println("-----------------------------------")
-        }
+//        val interfaces = NetworkInterface.getNetworkInterfaces().toList()
+//        for (networkInterface in interfaces) {
+//            println("インターフェース名: ${networkInterface.name}")
+//            println("ディスプレイ名: ${networkInterface.displayName}")
+//            println("インターフェースの詳細: ${networkInterface.inetAddresses.toList()}")
+//            println("-----------------------------------")
+//        }
 
     }
 }
