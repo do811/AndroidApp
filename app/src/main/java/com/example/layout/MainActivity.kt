@@ -15,7 +15,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         // init
-        if (EchonetLiteManager.isAssetManagerInitialized()) {
+        if (!EchonetLiteManager.isAssetManagerInitialized()) {
             EchonetLiteManager.assetManager = resources.assets
         }
 
