@@ -6,19 +6,18 @@ import android.util.DisplayMetrics
 import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 import com.example.layout.Layouts.AirConditionerLayout
-import com.example.layout.Layouts.ElectLayout
+import com.example.layout.Layouts.LightLayout
 import com.example.layout.Layouts.AddMachineLayout
 import com.example.layout.Layouts.ElseLayout
-import com.example.layout.intentsample.*
-import kotlinx.coroutines.runBlocking
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
-import java.net.InetAddress
-import java.net.NetworkInterface
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // init
+        if (EchonetLiteManager.isAssetManagerInitialized()) {
+            EchonetLiteManager.assetManager = resources.assets
+        }
 
         setContentView(R.layout.activity_main)
         val button = findViewById<Button>(R.id.button0)//右上
@@ -30,7 +29,7 @@ class MainActivity : AppCompatActivity() {
 
         val intent2secondsc = Intent(
             this@MainActivity,
-            ElectLayout::class.java//真ん中左
+            LightLayout::class.java//真ん中左
         )
         val intent3thridsc = Intent(
             this@MainActivity,

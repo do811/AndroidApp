@@ -7,9 +7,15 @@ import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.SocketTimeoutException
 
-class EchonetLiteManager(
-    private val assetManager: android.content.res.AssetManager
-) {
+// objectはシングルトンみたいなもん
+object EchonetLiteManager{
+    // objectだと初期化時の引数がないのでゴリ押し実装
+    // classでシングルトンを実装した方がいいかもしれん
+    lateinit var assetManager: android.content.res.AssetManager
+    fun isAssetManagerInitialized(): Boolean {
+        return ::assetManager.isInitialized
+    }
+
     private val echonetLitePort = 3610
     val TID = listOf(0x09, 0x29.toByte())
     var deviceList: List<EchonetLiteObject<Number>> = mutableListOf()

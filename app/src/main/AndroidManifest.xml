@@ -15,7 +15,7 @@
             android:theme="@style/Theme.Layout"
             tools:targetApi="31">
         <activity
-                android:name=".Layouts.ElectLayout"
+                android:name=".Layouts.LightLayout"
                 android:exported="false" />
         <activity
                 android:name=".Layouts.AddMachineLayout"

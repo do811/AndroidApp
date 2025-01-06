@@ -6,14 +6,14 @@ import kotlinx.parcelize.Parcelize
 
 @Parcelize
 data class ListItem(
-    val id: Long,
+    val id: Int,
     var MainText: String,
     var SubText: String,
     var Switch: Boolean,
     var SwitchState: String
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
-        parcel.readLong(),
+        parcel.readInt(),
         parcel.readString().toString(),
         parcel.readString().toString(),
         parcel.readByte() != 0.toByte(),
