@@ -6,7 +6,7 @@ import kotlinx.parcelize.Parcelize
 
 @Parcelize
 data class ListItem(
-    val id: Int,
+    val id: Int, // idにはEchonetLiteManager.deviceListのidxを格納
     var MainText: String,
     var SubText: String,
     var Switch: Boolean,

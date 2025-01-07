@@ -21,6 +21,7 @@ typealias LangDict = Map<String, String>
  * @param eoj EOJ 3バイト 例：[0x02, 0x90, 0x01]
  */
 class EchonetLiteObject<T : Number>(
+    val id: Int,
     val ipAddress: InetAddress, eoj: List<T>,
     private val assetManager: android.content.res.AssetManager
 ) : IEchonetLiteObject {
@@ -285,6 +286,11 @@ class EchonetLiteObject<T : Number>(
         return list1.zip(list2).all { (a, b) -> a == b }
     }
 
+    fun compareEoj(eoj: List<Number>): Boolean {
+        val eoj = eoj.map { it.toByte() }
+        return compareList(this.eoj, eoj)
+    }
+
     fun epcToString(epc: List<Byte>): String {
         return propertyList.find { compareList(it.epc, epc) }?.let { it.name["ja"] } ?: ""
     }
@@ -360,6 +366,7 @@ class EchonetLiteObject<T : Number>(
 }
 
 fun main() {
+
 
     // ipアドレスが192.168.2.52で、EOJが0x029001（単機能照明）のEchonetLiteオブジェクトを作成
     // 電源をONにし、明るさを100%に設定

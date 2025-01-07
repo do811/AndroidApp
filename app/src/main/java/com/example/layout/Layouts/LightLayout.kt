@@ -3,33 +3,37 @@ package com.example.layout.Layouts
 import android.os.Bundle
 import android.os.Parcelable
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.layout.EchonetLiteManager
 import com.example.layout.ListAdapter
 import com.example.layout.ListItem
 import com.example.layout.R
+import kotlinx.coroutines.launch
 
 class LightLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListener {
 
     private lateinit var recycView: RecyclerView
     private lateinit var adapter: ListAdapter
 
-    private val data = mutableListOf<ListItem>()
+    private var data = mutableListOf<ListItem>()
 //    private val data = mutableListOf(
 //        ListItem(1, "MainText1", "SubText1", true, "ON"),
 //        ListItem(2, "MainText2", "SubText2", false, "OFF"),
 //        ListItem(3, "MainText3", "SubText3", true, "ON")
 //    )
 
-    private fun addData(mainText: String, subText: String, isOn: Boolean) {
-        data.add(ListItem(data.size, mainText, subText, isOn, if (isOn) "ON" else "OFF"))
+    private fun addData(id: Int, mainText: String, subText: String, isOn: Boolean) {
+        data.add(ListItem(id, mainText, subText, isOn, if (isOn) "ON" else "OFF"))
         recycView.post {//adapterをいじる際にpostを使用
             adapter.notifyItemInserted(data.size - 1)
         }
     }
 
-    private fun removeData(position: Int) {
+    private fun removeData(id: Int) {
+        val position = data.indexOfFirst { it.id == id }
+        if (position == -1) return
         data.removeAt(position)
         recycView.post {
             adapter.notifyItemRemoved(position)
@@ -43,16 +47,25 @@ class LightLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListener {
         data[position].SwitchState = if (isOn) "ON" else "OFF"
     }
 
-    private fun getLightData(){
-        for (echonetLiteObject in EchonetLiteManager.deviceList) {
-            val mainText = echonetLiteObject.name["jp"].toString()
-            val subText = echonetLiteObject.name["en"].toString()
-            val isOn = echonetLiteObject.status[0x80.toByte()] == 0x30.toByte()
-            addData(mainText, subText, isOn)
+    private fun showLightData() {
+        for (i in 0..<data.size) {
+            data.removeAt(0)
+            recycView.post {
+                adapter.notifyItemRemoved(0)
+            }
         }
-    }
-
-    private fun updateLightData() {
+        for (i in 0..<EchonetLiteManager.deviceList.size) {
+            // 照明以外はいらない
+            if (!(EchonetLiteManager.deviceList[i].compareEoj(listOf(0x02, 0x91, 0x01))
+                        || EchonetLiteManager.deviceList[i].compareEoj(listOf(0x02, 0x91, 0x02)))
+            ) {
+                continue
+            }
+            val mainText = EchonetLiteManager.deviceList[i].name["jp"].toString()
+            val subText = EchonetLiteManager.deviceList[i].name["en"].toString()
+            val isOn = EchonetLiteManager.deviceList[i].status[0x80.toByte()] == 0x30.toByte()
+            addData(i, mainText, subText, isOn)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,12 +83,13 @@ class LightLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListener {
         adapter = ListAdapter(data, this)
         recycView.adapter = adapter
 
-        for(i in 1..10){
-            addData("MainText$i", "SubText$i", i % 2 == 0)
+//        for (i in 1..10) {
+//            addData(i, "MainText$i", "SubText$i", i % 2 == 0)
+//        }
+        lifecycleScope.launch {
+            EchonetLiteManager.asyncGetDeviceList()
+            showLightData()
         }
-
-
-
     }
 
 //    override fun onDestroy() {

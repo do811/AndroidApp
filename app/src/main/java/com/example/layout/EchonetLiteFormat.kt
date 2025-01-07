@@ -90,6 +90,7 @@ class EchonetFormat {
             for (i in 1..num) {
                 list.add(
                     EchonetLiteObject(
+                        EchonetLiteManager.deviceList.size,
                         data.ipAddress,
                         edt.slice(1 + (i - 1) * 3 until 1 + i * 3), assetManager
                     )

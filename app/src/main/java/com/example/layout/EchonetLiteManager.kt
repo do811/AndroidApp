@@ -8,7 +8,7 @@ import java.net.InetAddress
 import java.net.SocketTimeoutException
 
 // objectはシングルトンみたいなもん
-object EchonetLiteManager{
+object EchonetLiteManager {
     // objectだと初期化時の引数がないのでゴリ押し実装
     // classでシングルトンを実装した方がいいかもしれん
     lateinit var assetManager: android.content.res.AssetManager
@@ -31,16 +31,29 @@ object EchonetLiteManager{
 //        getDeviceList()
     }
 
-    fun getDeviceList() {
-        deviceList = mutableListOf()
+    fun insertDevice(device: EchonetLiteObject<Number>) {
+        val idx =
+            deviceList.indexOfFirst { it.ipAddress == device.ipAddress && it.eoj == device.eoj }
+        if (idx == -1) {
+            deviceList = deviceList.plus(device)
+        } else {
+            (deviceList as MutableList)[idx] = device
+        }
+    }
 
-        val selfNodeInstanceList =
-            EchonetLiteObject(
-                InetAddress.getByName("224.0.23.0"),
-                listOf(0x0E, 0xF0, 0x01),
-                assetManager
-            )
-        selfNodeInstanceList.get("自ノードインスタンスリストS")
+    fun getDeviceList() {
+        if (deviceList.isEmpty()) {
+            val selfNodeInstanceList =
+                EchonetLiteObject<Number>(
+                    0,
+                    InetAddress.getByName("224.0.23.0"),
+                    listOf(0x0E, 0xF0, 0x01),
+                    assetManager
+                )
+            deviceList = deviceList.plus(selfNodeInstanceList)
+            println(deviceList)
+        }
+        deviceList[0].get("自ノードインスタンスリストS")
 
         val socket = DatagramSocket(3610)
         socket.soTimeout = 100
@@ -58,7 +71,9 @@ object EchonetLiteManager{
                         ), assetManager
                     )
                 println("応答を受け取りました:${list}\n")
-                deviceList = deviceList.plus(list)
+
+//                deviceList = deviceList.plus(list)
+                list.forEach { insertDevice(it) }
             } catch (_: Exception) { // SocketTimeoutExceptionまたはIllegalArgumentException（jsonがない場合）
 //                println("timeout")
             }
