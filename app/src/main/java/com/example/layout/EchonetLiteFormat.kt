@@ -5,7 +5,7 @@ import java.net.DatagramPacket
 /**
  * パケットのパースなど、Echonet電文に関するユーティリティ
  */
-class EchonetFormat {
+class EchonetLiteFormat {
     companion object {
         /**
          * esv, epc, edtからEchonetLiteのパケットを作成する
