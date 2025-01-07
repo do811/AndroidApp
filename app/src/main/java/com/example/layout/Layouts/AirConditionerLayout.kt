@@ -35,7 +35,7 @@ class AirConditionerLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListe
 //            }
         }
         for (i in 0..<EchonetLiteManager.deviceList.size) {
-            // 照明以外はいらない
+            // エアコン以外はいらない
             if (!(EchonetLiteManager.deviceList[i].compareEoj(listOf(0x01, 0x30)))) {
                 continue
             }

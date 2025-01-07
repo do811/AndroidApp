@@ -35,12 +35,11 @@ class ElseLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListener {
 //            }
         }
         for (i in 0..<EchonetLiteManager.deviceList.size) {
-            // 照明以外はいらない
-            if (EchonetLiteManager.deviceList[i].compareEoj(
-                    listOf(0x01, 0x30)
-                ) || EchonetLiteManager.deviceList[i].compareEoj(
-                    listOf(0x02, 0x90)
-                ) || EchonetLiteManager.deviceList[i].compareEoj(listOf(0x02, 0x91))
+            // エアコンと照明とNodeProfile以外
+            if (EchonetLiteManager.deviceList[i].compareEoj(listOf(0x01, 0x30))
+                || EchonetLiteManager.deviceList[i].compareEoj(listOf(0x02, 0x90))
+                || EchonetLiteManager.deviceList[i].compareEoj(listOf(0x02, 0x91))
+                || EchonetLiteManager.deviceList[i].compareEoj(listOf(0x0E, 0xF0))
             ) {
                 continue
             }
