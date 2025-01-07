@@ -45,6 +45,17 @@ class LightLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListener {
         data[position].SubText = subText
         data[position].Switch = isOn
         data[position].SwitchState = if (isOn) "ON" else "OFF"
+        recycView.post { // ここでも変更するためpostを使用
+            adapter.notifyItemChanged(position) //
+        }
+    }
+
+    private fun updateData(position: Int, isOn: Boolean) {
+        data[position].Switch = isOn
+        data[position].SwitchState = if (isOn) "ON" else "OFF"
+        recycView.post { // ここでも変更するためpostを使用
+            adapter.notifyItemChanged(position) //
+        }
     }
 
     private fun showLightData() {
@@ -56,13 +67,13 @@ class LightLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListener {
         }
         for (i in 0..<EchonetLiteManager.deviceList.size) {
             // 照明以外はいらない
-            if (!(EchonetLiteManager.deviceList[i].compareEoj(listOf(0x02, 0x91, 0x01))
-                        || EchonetLiteManager.deviceList[i].compareEoj(listOf(0x02, 0x91, 0x02)))
+            if (!(EchonetLiteManager.deviceList[i].compareEoj(listOf(0x02, 0x90))
+                        || EchonetLiteManager.deviceList[i].compareEoj(listOf(0x02, 0x91)))
             ) {
                 continue
             }
-            val mainText = EchonetLiteManager.deviceList[i].name["jp"].toString()
-            val subText = EchonetLiteManager.deviceList[i].name["en"].toString()
+            val mainText = EchonetLiteManager.deviceList[i].name["en"].toString()
+            val subText = EchonetLiteManager.deviceList[i].ipAddress.toString()
             val isOn = EchonetLiteManager.deviceList[i].status[0x80.toByte()] == 0x30.toByte()
             addData(i, mainText, subText, isOn)
         }
@@ -83,12 +94,14 @@ class LightLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListener {
         adapter = ListAdapter(data, this)
         recycView.adapter = adapter
 
-//        for (i in 1..10) {
-//            addData(i, "MainText$i", "SubText$i", i % 2 == 0)
-//        }
+        for (i in 1..10) {
+            addData(i, "MainText$i", "SubText$i", i % 2 == 0)
+        }
         lifecycleScope.launch {
             EchonetLiteManager.asyncGetDeviceList()
             showLightData()
+            println("data:${data.size}件")
+            println(data)
         }
     }
 
@@ -102,16 +115,52 @@ class LightLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListener {
 //    }
 
     override fun onSwitchClick(position: Int, isChecked: Boolean) {
-        data[position].Switch = isChecked
-        data[position].MainText = "Init"
-        if (isChecked) {
-            data[position].SwitchState = "ON"
-        } else {
-            data[position].SwitchState = "OFF"
+        println("on press")
+        fun reset() {
+            updateData(position, data[position].Switch)
         }
-        recycView.post { // ここでも変更するためpostを使用
-            adapter.notifyItemChanged(position) //
+        val id = data[position].id
+        val obj = EchonetLiteManager.deviceList[id]
+        lifecycleScope.launch {
+            // edt:"true" or "false"
+            val set = obj.asyncSetC("動作状態", isChecked.toString())
+            if (set == null) {
+                reset()
+                return@launch
+            }
+            EchonetLiteManager.asyncWaitPacket(set)
+
+            val get = obj.asyncGet("動作状態")
+            if (get == null) {
+                reset()
+                return@launch
+            }
+
+            val ret = EchonetLiteManager.asyncWaitPacket(get)
+            if (ret?.edt == null || ret.edt.isEmpty()) {
+                reset()
+                return@launch
+            }
+
+            println("this is ${obj.edtToString(ret.epc, ret.edt)}")
+            if (obj.edtToString(ret.epc, ret.edt) == isChecked.toString()) {
+                // ちゃんと返答が返ってきてるなら変更
+                updateData(position, isChecked)
+            } else {
+                reset()
+            }
         }
+
+//        data[position].Switch = isChecked
+//        data[position].MainText = "Init"
+//        if (isChecked) {
+//            data[position].SwitchState = "ON"
+//        } else {
+//            data[position].SwitchState = "OFF"
+//        }
+//        recycView.post { // ここでも変更するためpostを使用
+//            adapter.notifyItemChanged(position) //
+//        }
     }
 
     override fun onSaveInstanceState(savedInstanceState: Bundle) {

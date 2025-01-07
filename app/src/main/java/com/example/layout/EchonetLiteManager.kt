@@ -64,8 +64,8 @@ object EchonetLiteManager {
             try {
                 socket.receive(packet)
                 val list =
-                    EchonetFormat.parseSelfNodeInstanceList(
-                        EchonetFormat.parsePacket(
+                    EchonetLiteFormat.parseSelfNodeInstanceList(
+                        EchonetLiteFormat.parsePacket(
                             packet,
                             TID
                         ), assetManager
@@ -102,7 +102,7 @@ object EchonetLiteManager {
             try {
                 socket.receive(packet)
 
-                val response = EchonetFormat.parsePacket(packet, TID)
+                val response = EchonetLiteFormat.parsePacket(packet, TID)
 //                println(response)
                 packetList.add(response)
             } catch (_: SocketTimeoutException) {
@@ -153,7 +153,7 @@ object EchonetLiteManager {
             try {
                 socket.receive(packet)
 
-                val response = EchonetFormat.parsePacket(packet, TID)
+                val response = EchonetLiteFormat.parsePacket(packet, TID)
 //                println(response)
 
                 if (response.tid != tid) {

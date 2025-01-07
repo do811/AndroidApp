@@ -256,7 +256,7 @@ class EchonetLiteObject<T : Number>(
      * @return 送信したパケット（失敗時にはnull）
      */
     override fun sendEchonetPacket(elPacket: EchonetLitePacketData): DatagramPacket {
-        val packet = EchonetFormat.makePacket(elPacket)
+        val packet = EchonetLiteFormat.makePacket(elPacket)
         val sendPacket = DatagramPacket(packet, packet.size, ipAddress, echonetLitePort)
         if (ipAddress.isMulticastAddress) {
             val interfaces = NetworkInterface.getNetworkInterfaces().toList()
@@ -287,8 +287,12 @@ class EchonetLiteObject<T : Number>(
     }
 
     fun compareEoj(eoj: List<Number>): Boolean {
-        val eoj = eoj.map { it.toByte() }
-        return compareList(this.eoj, eoj)
+        // インスタンスコードがあったら無視する
+        val eoj = if (eoj.size == 3) eoj.dropLast(1) else eoj
+        if (eoj.size != 2) return false
+
+        val eojByte = eoj.map { it.toByte() }
+        return compareList(this.eoj.dropLast(1), eojByte)
     }
 
     fun epcToString(epc: List<Byte>): String {
@@ -333,17 +337,17 @@ class EchonetLiteObject<T : Number>(
 
     override fun setI(epc: String, edt: String): EchonetLitePacketData? {
         val packet = makePacket(ESV.SETI, epc, edt) ?: return null
-        return EchonetFormat.parsePacket(sendEchonetPacket(packet))
+        return EchonetLiteFormat.parsePacket(sendEchonetPacket(packet))
     }
 
     override fun setC(epc: String, edt: String): EchonetLitePacketData? {
         val packet = makePacket(ESV.SETC, epc, edt) ?: return null
-        return EchonetFormat.parsePacket(sendEchonetPacket(packet))
+        return EchonetLiteFormat.parsePacket(sendEchonetPacket(packet))
     }
 
     override fun get(epc: String): EchonetLitePacketData? {
         val packet = makePacket(ESV.GET, epc, "") ?: return null
-        return EchonetFormat.parsePacket(sendEchonetPacket(packet))
+        return EchonetLiteFormat.parsePacket(sendEchonetPacket(packet))
     }
 
     override suspend fun asyncSetI(epc: String, edt: String): EchonetLitePacketData? {
