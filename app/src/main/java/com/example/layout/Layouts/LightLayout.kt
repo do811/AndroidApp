@@ -18,7 +18,7 @@ class LightLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListener {
     private lateinit var adapter: ListAdapter
 
     private var data = mutableListOf<ListItem>()
-//    private val data = mutableListOf(
+//    private var data = mutableListOf(
 //        ListItem(1, "MainText1", "SubText1", true, "ON"),
 //        ListItem(2, "MainText2", "SubText2", false, "OFF"),
 //        ListItem(3, "MainText3", "SubText3", true, "ON")
@@ -27,6 +27,7 @@ class LightLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListener {
     private fun addData(id: Int, mainText: String, subText: String, isOn: Boolean) {
         data.add(ListItem(id, mainText, subText, isOn, if (isOn) "ON" else "OFF"))
         recycView.post {//adapterをいじる際にpostを使用
+            println("size:${data.size - 1}")
             adapter.notifyItemInserted(data.size - 1)
         }
     }
@@ -61,9 +62,9 @@ class LightLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListener {
     private fun showLightData() {
         for (i in 0..<data.size) {
             data.removeAt(0)
-            recycView.post {
-                adapter.notifyItemRemoved(0)
-            }
+//            recycView.post {
+//                adapter.notifyItemRemoved(0)
+//            }
         }
         for (i in 0..<EchonetLiteManager.deviceList.size) {
             // 照明以外はいらない
@@ -75,7 +76,36 @@ class LightLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListener {
             val mainText = EchonetLiteManager.deviceList[i].name["en"].toString()
             val subText = EchonetLiteManager.deviceList[i].ipAddress.toString()
             val isOn = EchonetLiteManager.deviceList[i].status[0x80.toByte()] == 0x30.toByte()
-            addData(i, mainText, subText, isOn)
+//            addData(i, mainText, subText, isOn)
+            data.add(ListItem(i, mainText, subText, isOn, if (isOn) "ON" else "OFF"))
+        }
+        println("bbbbb")
+        recycView.post {
+            adapter.notifyDataSetChanged()
+        }
+    }
+
+    private fun checkLightData() {
+        lifecycleScope.launch {
+            for (i in 0..<data.size) {
+                val obj = EchonetLiteManager.deviceList[data[i].id]
+                val sent = obj.asyncGet("動作状態")
+                if (sent == null) {
+                    println("sent is null")
+                    continue
+                }
+                val ret = EchonetLiteManager.asyncWaitPacket(sent)
+                if (ret == null) {
+                    println("ret is null")
+                    continue
+                }
+                if (ret.edt.isNullOrEmpty()) {
+                    println("edt is null")
+                    continue
+                }
+                val edt = obj.edtToString(ret.epc, ret.edt)
+                updateData(i, edt == "true")
+            }
         }
     }
 
@@ -94,14 +124,16 @@ class LightLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListener {
         adapter = ListAdapter(data, this)
         recycView.adapter = adapter
 
-        for (i in 1..10) {
-            addData(i, "MainText$i", "SubText$i", i % 2 == 0)
-        }
+//        for (i in 1..10) {
+//            addData(i, "MainText$i", "SubText$i", i % 2 == 0)
+//        }
+//        addData(1, "", "", false)
         lifecycleScope.launch {
             EchonetLiteManager.asyncGetDeviceList()
             showLightData()
             println("data:${data.size}件")
             println(data)
+            checkLightData()
         }
     }
 
@@ -119,6 +151,7 @@ class LightLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListener {
         fun reset() {
             updateData(position, data[position].Switch)
         }
+
         val id = data[position].id
         val obj = EchonetLiteManager.deviceList[id]
         lifecycleScope.launch {

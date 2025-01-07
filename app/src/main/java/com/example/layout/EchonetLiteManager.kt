@@ -22,7 +22,7 @@ object EchonetLiteManager {
         private set // 外部からの変更を許可しない
 
     // getDeviseListのタイムアウト時間。外部から変更可能
-    var timeout = 4000
+    var timeout = 2000
     val packetList: ArrayDeque<EchonetLitePacketData> = ArrayDeque()
     var isReading = false
         private set // 外部からの変更を許可しない
