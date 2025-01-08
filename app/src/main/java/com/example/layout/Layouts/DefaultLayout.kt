@@ -131,10 +131,15 @@ open class DefaultLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListene
 //        addData(1, "", "", false)
         lifecycleScope.launch {
             EchonetLiteManager.asyncGetDeviceList()
+            lifecycleScope.launch {
+                EchonetLiteManager.asyncReadPacket()
+            }
             showLightData()
             println("data:${data.size}件")
             println(data)
             checkLightData()
+            println("on create end ")
+
         }
     }
 
@@ -149,30 +154,29 @@ open class DefaultLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListene
 
     override fun onSwitchClick(position: Int, isChecked: Boolean) {
         println("on press")
-        fun reset() {
-            updateData(position, data[position].Switch)
-        }
-
         val id = data[position].id
         val obj = EchonetLiteManager.deviceList[id]
         lifecycleScope.launch {
             // edt:"true" or "false"
             val set = obj.asyncSetC("動作状態", isChecked.toString())
             if (set == null) {
-                reset()
+                updateData(position, data[position].Switch)
+                println("set is null")
                 return@launch
             }
             EchonetLiteManager.asyncWaitPacket(set)
 
             val get = obj.asyncGet("動作状態")
             if (get == null) {
-                reset()
+                updateData(position, data[position].Switch)
+                println("get is null")
                 return@launch
             }
 
             val ret = EchonetLiteManager.asyncWaitPacket(get)
             if (ret?.edt == null || ret.edt.isEmpty()) {
-                reset()
+                updateData(position, data[position].Switch)
+                println("ret is null")
                 return@launch
             }
 
@@ -180,8 +184,10 @@ open class DefaultLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListene
             if (obj.edtToString(ret.epc, ret.edt) == isChecked.toString()) {
                 // ちゃんと返答が返ってきてるなら変更
                 updateData(position, isChecked)
+                println(isChecked)
             } else {
-                reset()
+                println("失敗")
+                updateData(position, data[position].Switch)
             }
         }
 

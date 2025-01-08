@@ -24,6 +24,9 @@ object EchonetLiteManager {
     // getDeviseListのタイムアウト時間。外部から変更可能
     var timeout = 2000
     val packetList: ArrayDeque<EchonetLitePacketData> = ArrayDeque()
+
+    val waitingPacketMap = mutableMapOf<EchonetLitePacketData, EchonetLitePacketData?>()
+
     var isReading = false
         private set // 外部からの変更を許可しない
 
@@ -91,6 +94,10 @@ object EchonetLiteManager {
         }
     }
 
+    /**
+     * waitingPacketMapに対応するパケットがあったら、それを格納する
+     * すでに受信済みのパケットは考慮しない
+     */
     private fun readPacket() {
         this.isReading = true
         val socket = DatagramSocket(echonetLitePort)
@@ -105,6 +112,14 @@ object EchonetLiteManager {
                 val response = EchonetLiteFormat.parsePacket(packet, TID)
 //                println(response)
                 packetList.add(response)
+
+                for ((key, value) in waitingPacketMap) {
+                    if (value != null) continue
+                    if (checkPacket(response, key)) {
+                        println("got expected packet!")
+                        waitingPacketMap[key] = response
+                    }
+                }
             } catch (_: SocketTimeoutException) {
             } catch (_: IllegalArgumentException) {
                 println("TIDが違います")
@@ -124,65 +139,107 @@ object EchonetLiteManager {
         this.isReading = false
     }
 
+    fun checkPacket(receive: EchonetLitePacketData, expect: EchonetLitePacketData): Boolean {
+        var returnValue: EchonetLitePacketData? = null
+        val tid = expect.tid
+        val seoj = expect.deoj
+        val deoj = expect.seoj
+        if (expect.esv != 0x61.toByte() && expect.esv != 0x62.toByte()) {
+            throw IllegalArgumentException(
+                "Echonet: esv is not 0x61 or 0x71 but ${
+                    "%02X".format(
+                        expect.esv
+                    )
+                }"
+            )
+        }
+        val esv = if (expect.esv == 0x61.toByte()) 0x71.toByte() else 0x72.toByte()
+
+
+        if (receive.tid != tid) {
+            println("TIDが違います")
+            return false
+        }
+        if (receive.seoj != seoj) {
+            println("SEOJが違います")
+            return false
+        }
+        if (receive.deoj != deoj) {
+            println("DEOJが違います")
+            return false
+        }
+        if (receive.esv != esv) {
+            println("ESVが違います")
+            return false
+        }
+        return true
+    }
+
     /**
      * 引数のパケットに対する返答を待つ。こちらから送信したパケットを引数にし、それへの返答を受け取ることを想定。
      * tidの一致, seojとdeojの一致（送受信者逆転）, esvの一致を確認する。
      */
     fun waitPacket(data: EchonetLitePacketData, timeout: Int = 2000): EchonetLitePacketData? {
-        var returnValue: EchonetLitePacketData? = null
-        val tid = data.tid
-        val seoj = data.deoj
-        val deoj = data.seoj
-        if (data.esv != 0x61.toByte() && data.esv != 0x62.toByte()) {
-            throw IllegalArgumentException(
-                "Echonet: esv is not 0x61 or 0x71 but ${
-                    "%02X".format(
-                        data.esv
-                    )
-                }"
-            )
+//        var returnValue: EchonetLitePacketData? = null
+//        val tid = data.tid
+//        val seoj = data.deoj
+//        val deoj = data.seoj
+//        if (data.esv != 0x61.toByte() && data.esv != 0x62.toByte()) {
+//            throw IllegalArgumentException(
+//                "Echonet: esv is not 0x61 or 0x71 but ${
+//                    "%02X".format(
+//                        data.esv
+//                    )
+//                }"
+//            )
+//        }
+//        val esv = if (data.esv == 0x61.toByte()) 0x71.toByte() else 0x72.toByte()
+//
+//        val socket = DatagramSocket(echonetLitePort)
+//        socket.soTimeout = 100
+//        val buf = ByteArray(1024)
+//        val packet = DatagramPacket(buf, buf.size)
+//
+//        for (i in 1..timeout / socket.soTimeout) {
+//            try {
+//                socket.receive(packet)
+//
+//                val response = EchonetLiteFormat.parsePacket(packet, TID)
+////                println(response)
+//
+//                if (response.tid != tid) {
+//                    println("TIDが違います")
+//                    continue
+//                }
+//                if (response.seoj != seoj) {
+//                    println("SEOJが違います")
+//                    continue
+//                }
+//                if (response.deoj != deoj) {
+//                    println("DEOJが違います")
+//                    continue
+//                }
+//                if (response.esv != esv) {
+//                    println("ESVが違います")
+//                    continue
+//                }
+//
+//                returnValue = response
+//                break
+//            } catch (_: SocketTimeoutException) {
+//            } catch (_: IllegalArgumentException) {
+//                println("TIDが違います")
+//            }
+//        }
+//
+//        socket.close()
+//        return returnValue
+        waitingPacketMap[data] = null
+        for (i in 1..timeout / 100) {
+            Thread.sleep(100)
+            if (waitingPacketMap[data] != null) break
         }
-        val esv = if (data.esv == 0x61.toByte()) 0x71.toByte() else 0x72.toByte()
-
-        val socket = DatagramSocket(echonetLitePort)
-        socket.soTimeout = 100
-        val buf = ByteArray(1024)
-        val packet = DatagramPacket(buf, buf.size)
-
-        for (i in 1..timeout / socket.soTimeout) {
-            try {
-                socket.receive(packet)
-
-                val response = EchonetLiteFormat.parsePacket(packet, TID)
-//                println(response)
-
-                if (response.tid != tid) {
-                    println("TIDが違います")
-                    continue
-                }
-                if (response.seoj != seoj) {
-                    println("SEOJが違います")
-                    continue
-                }
-                if (response.deoj != deoj) {
-                    println("DEOJが違います")
-                    continue
-                }
-                if (response.esv != esv) {
-                    println("ESVが違います")
-                    continue
-                }
-
-                returnValue = response
-                break
-            } catch (_: SocketTimeoutException) {
-            } catch (_: IllegalArgumentException) {
-                println("TIDが違います")
-            }
-        }
-
-        socket.close()
-        return returnValue
+        return waitingPacketMap[data]
     }
 
     /**
