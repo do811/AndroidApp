@@ -281,8 +281,7 @@ class ELObject<T : Number>(
             sendUdpSocket.send(sendPacket)
             sendUdpSocket.close()
         }
-        println("送信完了")
-        println("to: $ipAddress")
+        println("ELObject:送信完了:${ELFormat.parsePacket(sendPacket)}")
 
         return sendPacket
     }
@@ -460,7 +459,7 @@ fun main() {
 //                    packet, byteArrayOf(0x00, 0x0A)
 //                )
 //            )
-//            println("応答を受け取りました:${list}\n")
+//            println("ELObject:応答を受け取りました:${list}\n")
 //
 //        } catch (_: SocketTimeoutException) {
 //        }

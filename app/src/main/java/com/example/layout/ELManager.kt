@@ -58,7 +58,7 @@ object ELManager {
     private fun getDeviceList() {
         if (isReading) {
             // isReadingPacket==trueの時落ちる
-            println("isReading==trueのためgetDeviceListを起動できません")
+            println("ELManager:isReading==trueのためgetDeviceListを起動できません")
             return
         }
 
@@ -71,7 +71,6 @@ object ELManager {
                     assetManager
                 )
             deviceList = deviceList.plus(selfNodeInstanceList)
-            println(deviceList)
         }
         deviceList[0].get("自ノードインスタンスリストS")
 
@@ -90,18 +89,18 @@ object ELManager {
                             TID
                         ), assetManager
                     )
-                println("応答を受け取りました:${list}\n")
+                println("ELManager:応答を受け取りました:${list}\n")
 
 //                deviceList = deviceList.plus(list)
                 list.forEach { insertDevice(it) }
             } catch (_: Exception) { // SocketTimeoutExceptionまたはIllegalArgumentException（jsonがない場合）
-//                println("timeout")
+//                println("ELManager:timeout")
             }
         }
         socket.close()
 
-        println("検索終了")
-        println("検索結果:${deviceList}")
+        println("ELManager:検索終了")
+        println("ELManager:検索結果:${deviceList}")
     }
 
 
@@ -119,7 +118,7 @@ object ELManager {
         withContext(Dispatchers.IO) {
             if (isReading) {
                 // isReadingPacket==trueの時落ちる
-                println("isReading==trueのためgetDeviceListを起動できません")
+                println("ELManager:isReading==trueのためgetDeviceListを起動できません")
                 return@withContext
             }
 
@@ -155,18 +154,18 @@ object ELManager {
                                 TID
                             ), assetManager
                         )
-                    println("応答を受け取りました:${list}\n")
+                    println("ELManager:応答を受け取りました:${list}\n")
 
 //                deviceList = deviceList.plus(list)
                     list.forEach { insertDevice(it) }
                 } catch (_: Exception) { // SocketTimeoutExceptionまたはIllegalArgumentException（jsonがない場合）
-//                println("timeout")
+//                println("ELManager:timeout")
                 }
             }
             socket.close()
 
-            println("検索終了")
-            println("検索結果:${deviceList}")
+            println("ELManager:検索終了")
+            println("ELManager:検索結果:${deviceList}")
         }
     }
 
@@ -192,13 +191,14 @@ object ELManager {
                 for ((key, value) in waitingPacketMap) {
                     if (value != null) continue
                     if (checkPacket(response, key)) {
-                        println("got expected packet!")
+                        println("ELManager:got expected packet:$response")
+                        println()
                         waitingPacketMap[key] = response
                     }
                 }
             } catch (_: SocketTimeoutException) {
             } catch (_: IllegalArgumentException) {
-                println("TIDが違います")
+                println("ELManager:TIDが違うパケットを受け取りました")
             }
         }
         socket.close()
@@ -243,19 +243,19 @@ object ELManager {
 
 
         if (receive.tid != tid) {
-            println("TIDが違います")
+            println("ELManager:TIDが違います")
             return false
         }
         if (receive.seoj != expect.deoj) {
-            println("SEOJは${receive.seoj}ですが、${expect.deoj}が期待されています")
+            println("ELManager:SEOJは${receive.seoj}ですが、${expect.deoj}が期待されています")
             return false
         }
         if (receive.deoj != expect.seoj) {
-            println("DEOJは${receive.deoj}ですが、${expect.seoj}が期待されています")
+            println("ELManager:DEOJは${receive.deoj}ですが、${expect.seoj}が期待されています")
             return false
         }
         if (receive.esv != esv) {
-            println("ESVが違います")
+            println("ELManager:ESVが違います")
             return false
         }
         return true
@@ -300,17 +300,17 @@ fun main() {
     // None-Coroutineの世界でlaunchなどのCoroutineBuilderは使えない
 //    runBlocking {
 //        val task = launch {
-//            println("end")
+//            println("ELManager:end")
 //        }
-//        println("Hello, World!")
+//        println("ELManager:Hello, World!")
 //        task.join() // taskが終わるまで待つ
-//        println("Goodbye, World!")
+//        println("ELManager:Goodbye, World!")
 //    } // Hello, World! -> end -> Goodbye, World!
 
 
 //    val echonet = ELManager()
 //    val monoLite = ELObject(InetAddress.getByName("192.168.2.50"), listOf(0x02, 0x91, 0x01))
-//    println("here")
+//    println("ELManager:here")
 //    println(echonet.waitPacket(monoLite.setC("power", "off")))
 
 //    val echonet = ELManager()
@@ -320,7 +320,7 @@ fun main() {
 //            echonet.deviceList.forEach {
 //                println(it.asyncGet("power"))
 //            }
-//            println("len:"+echonet.deviceList.size)
+//            println("ELManager:len:"+echonet.deviceList.size)
 //        }
 //    }
 
@@ -329,15 +329,15 @@ fun main() {
 //    echonet.deviceList.forEach {
 //        println(it.get("power"))
 //    }
-//    println("len:" + echonet.deviceList.size)
+//    println("ELManager:len:" + echonet.deviceList.size)
 
 //    runBlocking {
 //        echonet.asyncGetDeviceList()
 //        echonet.deviceList.forEach { it ->
 //            val ret = it.asyncGet("power")
-//            println("ret:"+ret)
+//            println("ELManager:ret:"+ret)
 //        }
-//        println("len:"+echonet.deviceList.size)
+//        println("ELManager:len:"+echonet.deviceList.size)
 //    }
 
 //    val node = ELObject(InetAddress.getByName("224.0.23.0"), listOf(0x0E, 0xF0, 0x01))

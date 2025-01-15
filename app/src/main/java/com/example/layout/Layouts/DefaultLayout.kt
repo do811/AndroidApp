@@ -22,16 +22,11 @@ open class DefaultLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListene
     private lateinit var adapter: ListAdapter
 
     private var data = mutableListOf<ListItem>()
-//    private var data = mutableListOf(
-//        ListItem(1, "MainText1", "SubText1", true, "ON"),
-//        ListItem(2, "MainText2", "SubText2", false, "OFF"),
-//        ListItem(3, "MainText3", "SubText3", true, "ON")
-//    )
 
     private fun addData(id: Int, mainText: String, subText: String, isOn: Boolean) {
         data.add(ListItem(id, mainText, subText, isOn, if (isOn) "ON" else "OFF"))
         recycView.post {//adapterをいじる際にpostを使用
-            println("size:${data.size - 1}")
+            println("data added. size:${data.size - 1}")
             adapter.notifyItemInserted(data.size - 1)
         }
     }
@@ -66,9 +61,6 @@ open class DefaultLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListene
     private fun showLightData() {
         for (i in 0..<data.size) {
             data.removeAt(0)
-//            recycView.post {
-//                adapter.notifyItemRemoved(0)
-//            }
         }
         for (i in 0..<ELManager.deviceList.size) {
             if (!(isTargetEoj(ELManager.deviceList[i]))) {
@@ -77,11 +69,12 @@ open class DefaultLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListene
             val mainText = ELManager.deviceList[i].name["en"].toString()
             val subText = ELManager.deviceList[i].ipAddress.toString()
             val isOn = ELManager.deviceList[i].status[0x80.toByte()] == 0x30.toByte()
-//            addData(i, mainText, subText, isOn)
+            // addDataだといちいち通地されるが、今回は不必要
+            // addData(i, mainText, subText, isOn)
             data.add(ListItem(i, mainText, subText, isOn, if (isOn) "ON" else "OFF"))
         }
-        println("bbbbb")
         recycView.post {
+            // いろいろ変わったことを通知（重いので多用しないこと）
             adapter.notifyDataSetChanged()
         }
     }
@@ -92,16 +85,16 @@ open class DefaultLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListene
                 val obj = ELManager.deviceList[data[i].id]
                 val sent = obj.asyncGet("動作状態")
                 if (sent == null) {
-                    println("sent is null")
+                    println("checkLightData:sent is null")
                     continue
                 }
                 val ret = ELManager.asyncWaitPacket(sent)
                 if (ret == null) {
-                    println("ret is null")
+                    println("checkLightData:ret is null")
                     continue
                 }
                 if (ret.edt.isNullOrEmpty()) {
-                    println("edt is null")
+                    println("checkLightData:edt is null")
                     continue
                 }
                 val edt = obj.edtToString(ret.epc, ret.edt)
@@ -125,11 +118,8 @@ open class DefaultLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListene
         adapter = ListAdapter(data, this)
         recycView.adapter = adapter
 
-//        for (i in 1..10) {
-//            addData(i, "MainText$i", "SubText$i", i % 2 == 0)
-//        }
-//        addData(1, "", "", false)
         lifecycleScope.launch {
+            println("onCreate start")
             ELManager.asyncGetDeviceList()
             lifecycleScope.launch {
                 ELManager.asyncReadPacket()
@@ -138,7 +128,7 @@ open class DefaultLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListene
             println("data:${data.size}件")
             println(data)
             checkLightData()
-            println("on create end ")
+            println("onCreate end ")
         }
     }
 
@@ -157,7 +147,7 @@ open class DefaultLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListene
 //    }
 
     override fun onSwitchClick(position: Int, isChecked: Boolean) {
-        println("on press")
+        println("onSwitchClick")
         val id = data[position].id
         val obj = ELManager.deviceList[id]
         lifecycleScope.launch {
@@ -165,7 +155,7 @@ open class DefaultLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListene
             val set = obj.asyncSetC("動作状態", isChecked.toString())
             if (set == null) {
                 updateData(position, data[position].Switch)
-                println("set is null")
+                println("onSwitchClick:set is null")
                 return@launch
             }
             ELManager.asyncWaitPacket(set)
@@ -173,14 +163,14 @@ open class DefaultLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListene
             val get = obj.asyncGet("動作状態")
             if (get == null) {
                 updateData(position, data[position].Switch)
-                println("get is null")
+                println("onSwitchClick:get is null")
                 return@launch
             }
 
             val ret = ELManager.asyncWaitPacket(get)
             if (ret?.edt == null || ret.edt.isEmpty()) {
                 updateData(position, data[position].Switch)
-                println("ret is null")
+                println("onSwitchClick:ret is null")
                 return@launch
             }
 
@@ -190,21 +180,10 @@ open class DefaultLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListene
                 updateData(position, isChecked)
                 println(isChecked)
             } else {
-                println("失敗")
+                println("onSwitchClick:変更失敗")
                 updateData(position, data[position].Switch)
             }
         }
-
-//        data[position].Switch = isChecked
-//        data[position].MainText = "Init"
-//        if (isChecked) {
-//            data[position].SwitchState = "ON"
-//        } else {
-//            data[position].SwitchState = "OFF"
-//        }
-//        recycView.post { // ここでも変更するためpostを使用
-//            adapter.notifyItemChanged(position) //
-//        }
     }
 
     override fun onSaveInstanceState(savedInstanceState: Bundle) {
