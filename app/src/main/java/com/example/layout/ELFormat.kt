@@ -29,9 +29,9 @@ class ELFormat {
         }
 
         /**
-         * EchonetLiteのパケットを解析する
-         * Tidの照合も行うことが可能
-         * @param packet EchonetLiteのパケット
+         * EchonetLiteのパケットを解析し、ELPacketDataに整形して返す
+         * Tidの照合も可能
+         * @param packet EchonetLiteのDatagramPacket
          * @param collectTid Tidの照合を行う場合は指定する
          * @return EchonetLiteのデータ
          * @throws IllegalArgumentException パケットが短すぎる、EchonetLiteでない、Tidが一致しない場合
@@ -77,20 +77,27 @@ class ELFormat {
             return ELPacketData(packet.address, tid, seoj, deoj, esv, epc, edt)
         }
 
+        /**
+         * SelfNodeInstanceListを解析し、ELObjectのListにして返す
+         * @param data EchonetLiteのデータ
+         * @param assetManager アセットマネージャ
+         * @return EchonetLiteのオブジェクトのリスト
+         * @throws IllegalArgumentException ESV==0x72(getへの応答)でない場合
+         */
         fun parseSelfNodeInstanceList(
             data: ELPacketData,
             assetManager: android.content.res.AssetManager
-        ): List<EchonetLiteObject<Number>> {
+        ): List<ELObject<Number>> {
             if (data.esv != 0x72.toByte()) {
                 throw IllegalArgumentException("Echonet: esv is not 0x72")
             }
             val edt = data.edt ?: return listOf()
             val num = edt[0].toInt()
-            val list = mutableListOf<EchonetLiteObject<Number>>()
+            val list = mutableListOf<ELObject<Number>>()
             for (i in 1..num) {
                 list.add(
-                    EchonetLiteObject(
-                        EchonetLiteManager.deviceList.size,
+                    ELObject(
+                        ELManager.deviceList.size,
                         data.ipAddress,
                         edt.slice(1 + (i - 1) * 3 until 1 + i * 3), assetManager
                     )
@@ -99,11 +106,20 @@ class ELFormat {
             return list
         }
 
+        /**
+         * SelfNodeInstanceListを解析し、ELObjectのListにして返す
+         * TIDの照合も可能
+         * @param packet EchonetLiteのDatagramPacket
+         * @param collectTid Tidの照合を行う場合は指定する
+         * @param assetManager アセットマネージャ
+         * @return EchonetLiteのオブジェクトのリスト
+         * @throws IllegalArgumentException ESV==0x72(getへの応答)でない場合
+         */
         fun parseSelfNodeInstanceList(
             packet: DatagramPacket,
             collectTid: List<Byte>?,
             assetManager: android.content.res.AssetManager
-        ): List<EchonetLiteObject<Number>> {
+        ): List<ELObject<Number>> {
             return parseSelfNodeInstanceList(parsePacket(packet, collectTid), assetManager)
         }
     }

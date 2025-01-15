@@ -15,16 +15,20 @@ import java.net.NetworkInterface
  */
 typealias LangDict = Map<String, String>
 
+
 /**
  * EchonetLiteObject
+ * @param id オブジェクトのID
  * @param ipAddress IPアドレス 例："192.168.2.52"
  * @param eoj EOJ 3バイト 例：[0x02, 0x90, 0x01]
+ * @param assetManager アセットマネージャ
+ * @param T eojの型
  */
-class EchonetLiteObject<T : Number>(
+class ELObject<T : Number>(
     val id: Int,
     val ipAddress: InetAddress, eoj: List<T>,
     private val assetManager: android.content.res.AssetManager
-) : IELObject {
+) {
     // 参考：https://qiita.com/miyazawa_shi/items/725bc5eb6590be72970d
 
     companion object {
@@ -252,10 +256,11 @@ class EchonetLiteObject<T : Number>(
     }
 
     /**
-     * パケットを送信する
-     * @return 送信したパケット（失敗時にはnull）
+     * Echonetのパケットを作成し、送信する
+     * @param elPacket
+     * @return 送信したパケット（送信失敗時null）
      */
-    override fun sendEchonetPacket(elPacket: ELPacketData): DatagramPacket {
+    private fun sendEchonetPacket(elPacket: ELPacketData): DatagramPacket {
         val packet = ELFormat.makePacket(elPacket)
         val sendPacket = DatagramPacket(packet, packet.size, ipAddress, echonetLitePort)
         if (ipAddress.isMulticastAddress) {
@@ -335,34 +340,69 @@ class EchonetLiteObject<T : Number>(
         )
     }
 
-    override fun setI(epc: String, edt: String): ELPacketData? {
+
+    /**
+     * 任意のEPCのEDTをセットする 応答を受け取らない
+     * @param epc EPCの値
+     * @param edt EDTの値
+     * @return 送信したパケット（送信失敗時null）
+     */
+    private fun setI(epc: String, edt: String): ELPacketData? {
         val packet = makePacket(ESV.SETI, epc, edt) ?: return null
         return ELFormat.parsePacket(sendEchonetPacket(packet))
     }
 
-    override fun setC(epc: String, edt: String): ELPacketData? {
+    /**
+     * 任意のEPCのEDTをセットする 応答を受け取る
+     * @param epc EPCの値
+     * @param edt EDTの値
+     * @return 送信したパケット（送信失敗時null）
+     */
+    private fun setC(epc: String, edt: String): ELPacketData? {
         val packet = makePacket(ESV.SETC, epc, edt) ?: return null
         return ELFormat.parsePacket(sendEchonetPacket(packet))
     }
 
-    override fun get(epc: String): ELPacketData? {
+    /**
+     * 任意のEPCのEDTを知る
+     * @param epc EPCの値
+     * @return 送信したパケット（送信失敗時null）
+     */
+    fun get(epc: String): ELPacketData? {
         val packet = makePacket(ESV.GET, epc, "") ?: return null
         return ELFormat.parsePacket(sendEchonetPacket(packet))
     }
 
-    override suspend fun asyncSetI(epc: String, edt: String): ELPacketData? {
+    /**
+     * 任意のEPCのEDTをセットする 応答を受け取らない
+     * @param epc EPCの値
+     * @param edt EDTの値
+     * @return 送信したパケット（送信失敗時null）
+     */
+    suspend fun asyncSetI(epc: String, edt: String): ELPacketData? {
         return withContext(Dispatchers.IO) {
             setI(epc, edt)
         }
     }
 
-    override suspend fun asyncSetC(epc: String, edt: String): ELPacketData? {
+    /**
+     * 任意のEPCのEDTをセットする 応答を受け取る
+     * @param epc EPCの値
+     * @param edt EDTの値
+     * @return 送信したパケット（送信失敗時null）
+     */
+    suspend fun asyncSetC(epc: String, edt: String): ELPacketData? {
         return withContext(Dispatchers.IO) {
             setC(epc, edt)
         }
     }
 
-    override suspend fun asyncGet(epc: String): ELPacketData? {
+    /**
+     * 任意のEPCのEDTを知る
+     * @param epc EPCの値
+     * @return 送信したパケット（送信失敗時null）
+     */
+    suspend fun asyncGet(epc: String): ELPacketData? {
         return withContext(Dispatchers.IO) {
             get(epc)
         }

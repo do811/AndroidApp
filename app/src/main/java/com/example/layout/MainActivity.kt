@@ -5,18 +5,21 @@ import android.os.Bundle
 import android.util.DisplayMetrics
 import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.example.layout.Layouts.AirConditionerLayout
 import com.example.layout.Layouts.LightLayout
 import com.example.layout.Layouts.AddMachineLayout
 import com.example.layout.Layouts.ElseLayout
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         // init
-        if (!EchonetLiteManager.isAssetManagerInitialized()) {
-            EchonetLiteManager.assetManager = resources.assets
+        if (!ELManager.isAssetManagerInitialized()) {
+            ELManager.assetManager = resources.assets
         }
 
         setContentView(R.layout.activity_main)
@@ -98,6 +101,7 @@ class MainActivity : AppCompatActivity() {
 //                    ?.let { it1 -> echonet.asyncWaitPacket(it1) })
 //            }
         }
+
 
     }
 }

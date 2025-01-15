@@ -6,15 +6,15 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.layout.EchonetLiteManager
-import com.example.layout.EchonetLiteObject
+import com.example.layout.ELManager
+import com.example.layout.ELObject
 import com.example.layout.ListAdapter
 import com.example.layout.ListItem
 import com.example.layout.R
 import kotlinx.coroutines.launch
 
 open class DefaultLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListener {
-    open fun isTargetEoj(obj: EchonetLiteObject<Number>): Boolean {
+    open fun isTargetEoj(obj: ELObject<Number>): Boolean {
         return true
     }
 
@@ -70,13 +70,13 @@ open class DefaultLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListene
 //                adapter.notifyItemRemoved(0)
 //            }
         }
-        for (i in 0..<EchonetLiteManager.deviceList.size) {
-            if (!(isTargetEoj(EchonetLiteManager.deviceList[i]))) {
+        for (i in 0..<ELManager.deviceList.size) {
+            if (!(isTargetEoj(ELManager.deviceList[i]))) {
                 continue
             }
-            val mainText = EchonetLiteManager.deviceList[i].name["en"].toString()
-            val subText = EchonetLiteManager.deviceList[i].ipAddress.toString()
-            val isOn = EchonetLiteManager.deviceList[i].status[0x80.toByte()] == 0x30.toByte()
+            val mainText = ELManager.deviceList[i].name["en"].toString()
+            val subText = ELManager.deviceList[i].ipAddress.toString()
+            val isOn = ELManager.deviceList[i].status[0x80.toByte()] == 0x30.toByte()
 //            addData(i, mainText, subText, isOn)
             data.add(ListItem(i, mainText, subText, isOn, if (isOn) "ON" else "OFF"))
         }
@@ -89,13 +89,13 @@ open class DefaultLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListene
     private fun checkLightData() {
         lifecycleScope.launch {
             for (i in 0..<data.size) {
-                val obj = EchonetLiteManager.deviceList[data[i].id]
+                val obj = ELManager.deviceList[data[i].id]
                 val sent = obj.asyncGet("動作状態")
                 if (sent == null) {
                     println("sent is null")
                     continue
                 }
-                val ret = EchonetLiteManager.asyncWaitPacket(sent)
+                val ret = ELManager.asyncWaitPacket(sent)
                 if (ret == null) {
                     println("ret is null")
                     continue
@@ -130,9 +130,9 @@ open class DefaultLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListene
 //        }
 //        addData(1, "", "", false)
         lifecycleScope.launch {
-            EchonetLiteManager.asyncGetDeviceList()
+            ELManager.asyncGetDeviceList()
             lifecycleScope.launch {
-                EchonetLiteManager.asyncReadPacket()
+                ELManager.asyncReadPacket()
             }
             showLightData()
             println("data:${data.size}件")
@@ -144,7 +144,7 @@ open class DefaultLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListene
 
     override fun onStop() {
         super.onStop()
-        EchonetLiteManager.stopReadPacket()
+        ELManager.stopReadPacket()
     }
 
 //    override fun onDestroy() {
@@ -159,7 +159,7 @@ open class DefaultLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListene
     override fun onSwitchClick(position: Int, isChecked: Boolean) {
         println("on press")
         val id = data[position].id
-        val obj = EchonetLiteManager.deviceList[id]
+        val obj = ELManager.deviceList[id]
         lifecycleScope.launch {
             // edt:"true" or "false"
             val set = obj.asyncSetC("動作状態", isChecked.toString())
@@ -168,7 +168,7 @@ open class DefaultLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListene
                 println("set is null")
                 return@launch
             }
-            EchonetLiteManager.asyncWaitPacket(set)
+            ELManager.asyncWaitPacket(set)
 
             val get = obj.asyncGet("動作状態")
             if (get == null) {
@@ -177,7 +177,7 @@ open class DefaultLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListene
                 return@launch
             }
 
-            val ret = EchonetLiteManager.asyncWaitPacket(get)
+            val ret = ELManager.asyncWaitPacket(get)
             if (ret?.edt == null || ret.edt.isEmpty()) {
                 updateData(position, data[position].Switch)
                 println("ret is null")
