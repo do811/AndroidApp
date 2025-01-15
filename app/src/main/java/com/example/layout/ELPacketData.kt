@@ -2,7 +2,7 @@ package com.example.layout
 
 import java.net.InetAddress
 
-data class EchonetLitePacketData(
+data class ELPacketData(
     val ipAddress: InetAddress,
     val tid: List<Byte>,
     val seoj: List<Byte>,

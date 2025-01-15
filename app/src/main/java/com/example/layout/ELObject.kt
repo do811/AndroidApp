@@ -24,7 +24,7 @@ class EchonetLiteObject<T : Number>(
     val id: Int,
     val ipAddress: InetAddress, eoj: List<T>,
     private val assetManager: android.content.res.AssetManager
-) : IEchonetLiteObject {
+) : IELObject {
     // 参考：https://qiita.com/miyazawa_shi/items/725bc5eb6590be72970d
 
     companion object {
@@ -255,8 +255,8 @@ class EchonetLiteObject<T : Number>(
      * パケットを送信する
      * @return 送信したパケット（失敗時にはnull）
      */
-    override fun sendEchonetPacket(elPacket: EchonetLitePacketData): DatagramPacket {
-        val packet = EchonetLiteFormat.makePacket(elPacket)
+    override fun sendEchonetPacket(elPacket: ELPacketData): DatagramPacket {
+        val packet = ELFormat.makePacket(elPacket)
         val sendPacket = DatagramPacket(packet, packet.size, ipAddress, echonetLitePort)
         if (ipAddress.isMulticastAddress) {
             val interfaces = NetworkInterface.getNetworkInterfaces().toList()
@@ -309,7 +309,7 @@ class EchonetLiteObject<T : Number>(
      * Stringのepc, edtをEchonetLitePacketDataに変換する
      * epc, edtが存在しない場合にはnull
      */
-    private fun makePacket(esv: ESV, epc: String, edt: String): EchonetLitePacketData? {
+    private fun makePacket(esv: ESV, epc: String, edt: String): ELPacketData? {
         val esvValue = when (esv) {
             ESV.SETI -> 0x60.toByte()
             ESV.SETC -> 0x61.toByte()
@@ -324,7 +324,7 @@ class EchonetLiteObject<T : Number>(
             else -> propertyList.find { it.name["ja"] == epc }?.enumList?.find { it.name == edt }?.edt
                 ?: return null
         }
-        return EchonetLitePacketData(
+        return ELPacketData(
             InetAddress.getLocalHost(),
             TID,
             controller,
@@ -335,34 +335,34 @@ class EchonetLiteObject<T : Number>(
         )
     }
 
-    override fun setI(epc: String, edt: String): EchonetLitePacketData? {
+    override fun setI(epc: String, edt: String): ELPacketData? {
         val packet = makePacket(ESV.SETI, epc, edt) ?: return null
-        return EchonetLiteFormat.parsePacket(sendEchonetPacket(packet))
+        return ELFormat.parsePacket(sendEchonetPacket(packet))
     }
 
-    override fun setC(epc: String, edt: String): EchonetLitePacketData? {
+    override fun setC(epc: String, edt: String): ELPacketData? {
         val packet = makePacket(ESV.SETC, epc, edt) ?: return null
-        return EchonetLiteFormat.parsePacket(sendEchonetPacket(packet))
+        return ELFormat.parsePacket(sendEchonetPacket(packet))
     }
 
-    override fun get(epc: String): EchonetLitePacketData? {
+    override fun get(epc: String): ELPacketData? {
         val packet = makePacket(ESV.GET, epc, "") ?: return null
-        return EchonetLiteFormat.parsePacket(sendEchonetPacket(packet))
+        return ELFormat.parsePacket(sendEchonetPacket(packet))
     }
 
-    override suspend fun asyncSetI(epc: String, edt: String): EchonetLitePacketData? {
+    override suspend fun asyncSetI(epc: String, edt: String): ELPacketData? {
         return withContext(Dispatchers.IO) {
             setI(epc, edt)
         }
     }
 
-    override suspend fun asyncSetC(epc: String, edt: String): EchonetLitePacketData? {
+    override suspend fun asyncSetC(epc: String, edt: String): ELPacketData? {
         return withContext(Dispatchers.IO) {
             setC(epc, edt)
         }
     }
 
-    override suspend fun asyncGet(epc: String): EchonetLitePacketData? {
+    override suspend fun asyncGet(epc: String): ELPacketData? {
         return withContext(Dispatchers.IO) {
             get(epc)
         }

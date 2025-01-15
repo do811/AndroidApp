@@ -5,14 +5,14 @@ import java.net.DatagramPacket
 /**
  * パケットのパースなど、Echonet電文に関するユーティリティ
  */
-class EchonetLiteFormat {
+class ELFormat {
     companion object {
         /**
          * esv, epc, edtからEchonetLiteのパケットを作成する
          * @param data EchonetLiteのデータ
          * @return EchonetLiteのパケット 例：[0x10, 0x81, 0x00, 0x0A, 0x05, 0xFF, 0x01, 0x02, 0x90, 0x01, 0x60, 0x01, 0x80, 0x01, 0x30]
          */
-        fun makePacket(data: EchonetLitePacketData): ByteArray {
+        fun makePacket(data: ELPacketData): ByteArray {
             val payload = mutableListOf(0x10, 0x81.toByte())
             payload.addAll(data.tid)
             payload.addAll(data.seoj)
@@ -39,7 +39,7 @@ class EchonetLiteFormat {
         fun parsePacket(
             packet: DatagramPacket,
             collectTid: List<Byte>? = null
-        ): EchonetLitePacketData {
+        ): ELPacketData {
             val data = packet.data
             if (data.size < 12) {
                 throw IllegalArgumentException("Echonet: packet is too short")
@@ -74,11 +74,11 @@ class EchonetLiteFormat {
             } else {
                 null
             }
-            return EchonetLitePacketData(packet.address, tid, seoj, deoj, esv, epc, edt)
+            return ELPacketData(packet.address, tid, seoj, deoj, esv, epc, edt)
         }
 
         fun parseSelfNodeInstanceList(
-            data: EchonetLitePacketData,
+            data: ELPacketData,
             assetManager: android.content.res.AssetManager
         ): List<EchonetLiteObject<Number>> {
             if (data.esv != 0x72.toByte()) {

@@ -23,9 +23,9 @@ object EchonetLiteManager {
 
     // getDeviseListのタイムアウト時間。外部から変更可能
     var timeout = 2000
-    val packetList: ArrayDeque<EchonetLitePacketData> = ArrayDeque()
+    val packetList: ArrayDeque<ELPacketData> = ArrayDeque()
 
-    val waitingPacketMap = mutableMapOf<EchonetLitePacketData, EchonetLitePacketData?>()
+    val waitingPacketMap = mutableMapOf<ELPacketData, ELPacketData?>()
 
     var isReading = false
         private set // 外部からの変更を許可しない
@@ -68,8 +68,8 @@ object EchonetLiteManager {
             try {
                 socket.receive(packet)
                 val list =
-                    EchonetLiteFormat.parseSelfNodeInstanceList(
-                        EchonetLiteFormat.parsePacket(
+                    ELFormat.parseSelfNodeInstanceList(
+                        ELFormat.parsePacket(
                             packet,
                             TID
                         ), assetManager
@@ -110,7 +110,7 @@ object EchonetLiteManager {
             try {
                 socket.receive(packet)
 
-                val response = EchonetLiteFormat.parsePacket(packet, TID)
+                val response = ELFormat.parsePacket(packet, TID)
 //                println(response)
                 packetList.add(response)
 
@@ -140,8 +140,8 @@ object EchonetLiteManager {
         this.isReading = false
     }
 
-    fun checkPacket(receive: EchonetLitePacketData, expect: EchonetLitePacketData): Boolean {
-        var returnValue: EchonetLitePacketData? = null
+    fun checkPacket(receive: ELPacketData, expect: ELPacketData): Boolean {
+        var returnValue: ELPacketData? = null
         val tid = expect.tid
         val seoj = expect.deoj
         val deoj = expect.seoj
@@ -180,8 +180,8 @@ object EchonetLiteManager {
      * 引数のパケットに対する返答を待つ。こちらから送信したパケットを引数にし、それへの返答を受け取ることを想定。
      * tidの一致, seojとdeojの一致（送受信者逆転）, esvの一致を確認する。
      */
-    fun waitPacket(data: EchonetLitePacketData, timeout: Int = 2000): EchonetLitePacketData? {
-//        var returnValue: EchonetLitePacketData? = null
+    fun waitPacket(data: ELPacketData, timeout: Int = 2000): ELPacketData? {
+//        var returnValue: ELPacketData? = null
 //        val tid = data.tid
 //        val seoj = data.deoj
 //        val deoj = data.seoj
@@ -205,7 +205,7 @@ object EchonetLiteManager {
 //            try {
 //                socket.receive(packet)
 //
-//                val response = EchonetLiteFormat.parsePacket(packet, TID)
+//                val response = ELFormat.parsePacket(packet, TID)
 ////                println(response)
 //
 //                if (response.tid != tid) {
@@ -246,14 +246,14 @@ object EchonetLiteManager {
     /**
      * Coroutine版のwaitPacket
      * suspend関数のため、呼び出すとlaunch内でのみ処理が止まる。
-     * @param data: EchonetLitePacketData
+     * @param data: ELPacketData
      * @param timeout: Int
-     * @return EchonetLitePacketData?
+     * @return ELPacketData?
      */
     suspend fun asyncWaitPacket(
-        data: EchonetLitePacketData,
+        data: ELPacketData,
         timeout: Int = 2000,
-    ): EchonetLitePacketData? {
+    ): ELPacketData? {
         return withContext(Dispatchers.IO) {
             waitPacket(data, timeout)
         }
