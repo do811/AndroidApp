@@ -30,10 +30,6 @@ object EchonetLiteManager {
     var isReading = false
         private set // 外部からの変更を許可しない
 
-    init {
-//        getDeviceList()
-    }
-
     fun insertDevice(device: EchonetLiteObject<Number>) {
         val idx =
             deviceList.indexOfFirst { it.ipAddress == device.ipAddress && it.eoj == device.eoj }
@@ -45,6 +41,11 @@ object EchonetLiteManager {
     }
 
     fun getDeviceList() {
+        if (isReading) {
+            // isReadingPacket==trueの時落ちる
+            println("isReading==trueのためgetDeviceListを起動できません")
+            return
+        }
         if (deviceList.isEmpty()) {
             val selfNodeInstanceList =
                 EchonetLiteObject<Number>(

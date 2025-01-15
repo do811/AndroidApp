@@ -139,8 +139,12 @@ open class DefaultLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListene
             println(data)
             checkLightData()
             println("on create end ")
-
         }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        EchonetLiteManager.stopReadPacket()
     }
 
 //    override fun onDestroy() {
