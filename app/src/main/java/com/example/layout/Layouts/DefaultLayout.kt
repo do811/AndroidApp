@@ -14,6 +14,10 @@ import com.example.layout.R
 import kotlinx.coroutines.launch
 
 open class DefaultLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListener {
+    /**
+     * 引数のEOJが、このレイアウトで対象としているEOJかどうか判断する
+     * 子クラスでオーバーライドする想定
+     */
     open fun isTargetEoj(obj: ELObject<Number>): Boolean {
         return true
     }
@@ -69,7 +73,7 @@ open class DefaultLayout : AppCompatActivity(), ListAdapter.OnSwitchClickListene
             val mainText = ELManager.deviceList[i].name["en"].toString()
             val subText = ELManager.deviceList[i].ipAddress.toString()
             val isOn = ELManager.deviceList[i].status[0x80.toByte()] == 0x30.toByte()
-            // addDataだといちいち通地されるが、今回は不必要
+            // addDataだと毎回通知されるが、今回は不必要
             // addData(i, mainText, subText, isOn)
             data.add(ListItem(i, mainText, subText, isOn, if (isOn) "ON" else "OFF"))
         }
