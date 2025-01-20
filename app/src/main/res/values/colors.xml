@@ -3,6 +3,10 @@
     <color name="black">#1D1C1C</color>
     <color name="white">#FFFFFFFF</color>
     <color name="air_conditioner">#A5959191</color>
-    <color name="background">#D513907D</color>
     <color name="target">#B244FF00</color>
+    
+    <color name="background">#f9f4ef</color>
+    <color name="button">#8c7851</color>
+    <color name="outline">#020826</color>
+    <color name="text">#001858</color>"
 </resources>
