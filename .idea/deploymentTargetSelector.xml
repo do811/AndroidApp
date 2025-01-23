@@ -9,6 +9,11 @@
             <template>
               <DeviceId pluginId="FirebaseDirectAccess" type="TEMPLATE" identifier="model_id=e1q/34" />
             </template>
+        <DropdownSelection timestamp="2025-01-15T08:58:42.717163700Z">
+          <Target type="DEFAULT_BOOT">
+            <handle>
+              <DeviceId pluginId="PhysicalDevice" identifier="serial=efd99e3" />
+            </handle>
           </Target>
         </DropdownSelection>
         <DialogSelection />
