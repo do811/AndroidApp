@@ -26,7 +26,6 @@ class MainActivity : AppCompatActivity() {
         val button = findViewById<Button>(R.id.button0)//右上
         val button1 = findViewById<Button>(R.id.button1)//左上
         val button2 = findViewById<Button>(R.id.button2)//右下
-        val button3 = findViewById<Button>(R.id.button3)//左下
         val button4 = findViewById<Button>(R.id.button4)//下の設定ボタン
         val displayMetrics = DisplayMetrics()
 
@@ -58,24 +57,24 @@ class MainActivity : AppCompatActivity() {
         button2.setOnClickListener {
             startActivity(intentElseSc)
         }
-        button3.setOnClickListener {
-            startActivity(intent4fourthsc)
-//            lifecycleScope.launch {
-//                val a = EchonetLiteObject(
-//                    InetAddress.getByName("192.168.2.118"),
-//                    listOf(0x02, 0x90, 0x01),
-//                    resources.assets
-//                )
-//                val ret =
-//                    a.asyncGet("動作状態")?.let { it1 -> echonet.asyncWaitPacket(it1) }
-//                if (ret == null) {
-//                    return@launch
-//                }
-//                println(ret)
-//                print(a.epcToString(ret.epc) + ":")
-//                println(ret.edt?.let { it1 -> a.edtToString(ret.epc, it1) })
-//            }
-        }
+//        button3.setOnClickListener {
+//            startActivity(intent4fourthsc)
+////            lifecycleScope.launch {
+////                val a = EchonetLiteObject(
+////                    InetAddress.getByName("192.168.2.118"),
+////                    listOf(0x02, 0x90, 0x01),
+////                    resources.assets
+////                )
+////                val ret =
+////                    a.asyncGet("動作状態")?.let { it1 -> echonet.asyncWaitPacket(it1) }
+////                if (ret == null) {
+////                    return@launch
+////                }
+////                println(ret)
+////                print(a.epcToString(ret.epc) + ":")
+////                println(ret.edt?.let { it1 -> a.edtToString(ret.epc, it1) })
+////            }
+//        }
         button4.setOnClickListener {
             startActivity(intent2secondsc)
 //            lifecycleScope.launch {
