@@ -2,10 +2,7 @@ import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 
-<<<<<<< HEAD
 //使わん,9/30
-=======
->>>>>>> Function
 interface _StubEchonetObject {
     /**
      * Echonetのパケットを作成し、送信する（つもり）

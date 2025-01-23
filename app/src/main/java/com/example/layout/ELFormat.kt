@@ -1,6 +1,7 @@
 package com.example.layout
 
 import java.net.DatagramPacket
+import com.example.layout.ELManager
 
 /**
  * パケットのパースなど、Echonet電文に関するユーティリティ
@@ -96,7 +97,7 @@ class ELFormat {
             val list = mutableListOf<ELObject<Number>>()
             for (i in 1..num) {
                 list.add(
-                    ELObject(
+                    ELObject<Number>(
                         ELManager.deviceList.size,
                         data.ipAddress,
                         edt.slice(1 + (i - 1) * 3 until 1 + i * 3), assetManager

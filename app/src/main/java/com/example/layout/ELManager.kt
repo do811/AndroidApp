@@ -104,7 +104,6 @@ object ELManager {
     }
 
 
-
     /**
      * ネットワーク内のデバイスを検索し、deviceListに格納する
      * すでにdeviceListに格納されているデバイスの場合は情報を更新する
