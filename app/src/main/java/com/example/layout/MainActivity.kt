@@ -1,6 +1,6 @@
 package com.example.layout
 
-import com.example.layout.intentsample.Otherscreen1
+import com.example.layout.intentsample.otherscreen1
 import android.content.Intent
 import android.os.Bundle
 import android.util.DisplayMetrics
@@ -40,7 +40,7 @@ class MainActivity : AppCompatActivity() {
         )
         val intent4fourthsc = Intent(
             this@MainActivity,
-            Otherscreen1::class.java
+            otherscreen1::class.java
         )
         val intentElseSc = Intent(
             this@MainActivity,

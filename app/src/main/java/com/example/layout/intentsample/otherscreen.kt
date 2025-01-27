@@ -6,15 +6,15 @@ import android.view.View
 import android.widget.Button
 import com.example.layout.R
 
-class otherscreen : AppCompatActivity() {
+class otherscreen1 : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_sub)
-        val backbutton = findViewById<Button>(R.id.button8)
-        backbutton.setOnClickListener{
+        setContentView(R.layout.activity_otherscreen1)
+        val backbutton = findViewById<Button>(R.id.button3)
+        backbutton.setOnClickListener {
             finish()
         }
-        fun onButtonClick(view: View){
+        fun onButtonClick(view: View) {
             finish()
         }
     }
