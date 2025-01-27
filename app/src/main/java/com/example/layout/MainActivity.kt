@@ -1,5 +1,6 @@
 package com.example.layout
 
+import com.example.layout.intentsample.Otherscreen1
 import android.content.Intent
 import android.os.Bundle
 import android.util.DisplayMetrics
@@ -26,7 +27,7 @@ class MainActivity : AppCompatActivity() {
         val button = findViewById<Button>(R.id.button0)//右上
         val button1 = findViewById<Button>(R.id.button1)//左上
         val button2 = findViewById<Button>(R.id.button2)//右下
-        val button4 = findViewById<Button>(R.id.button4)//下の設定ボタン
+        val button4 = findViewById<Button>(R.id.button4)//設定ボタン
         val displayMetrics = DisplayMetrics()
 
         val intent2secondsc = Intent(
@@ -39,7 +40,7 @@ class MainActivity : AppCompatActivity() {
         )
         val intent4fourthsc = Intent(
             this@MainActivity,
-            AddMachineLayout::class.java
+            Otherscreen1::class.java
         )
         val intentElseSc = Intent(
             this@MainActivity,
@@ -76,7 +77,7 @@ class MainActivity : AppCompatActivity() {
 ////            }
 //        }
         button4.setOnClickListener {
-            startActivity(intent2secondsc)
+            startActivity(intent4fourthsc)
 //            lifecycleScope.launch {
 //                echonet.asyncGetDeviceList()
 //                echonet.deviceList.forEach { it ->
