@@ -1,6 +1,6 @@
 package com.example.layout
 
-import com.example.layout.intentsample.otherscreen1
+import com.example.layout.intentsample.otherscreen
 import android.content.Intent
 import android.os.Bundle
 import android.util.DisplayMetrics
