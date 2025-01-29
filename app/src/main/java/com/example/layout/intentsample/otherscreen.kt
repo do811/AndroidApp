@@ -19,9 +19,6 @@ class otherscreen1 : AppCompatActivity() {
         val bar = findViewById<SeekBar>(R.id.seekBar)
         var text = findViewById<TextView>(R.id.textView)
         val mainIntent = Intent(this, MainActivity::class.java)
-        backbutton.setOnClickListener {
-            finish()
-        }
         bar.setOnSeekBarChangeListener(object : OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 text.text = "${progress}%"
@@ -40,6 +37,9 @@ class otherscreen1 : AppCompatActivity() {
             }
         }
         )
+        backbutton.setOnClickListener {
+            startActivity(mainIntent)
+        }
         fun onButtonClick(view: View) {
             startActivity(mainIntent)
         }

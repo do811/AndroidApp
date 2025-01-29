@@ -8,6 +8,7 @@ import android.graphics.Color
 import android.os.Bundle
 import android.util.DisplayMetrics
 import android.widget.Button
+import android.widget.SeekBar
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.lifecycle.lifecycleScope
@@ -36,23 +37,23 @@ class MainActivity : AppCompatActivity() {
         val Allral = constraint.background
         val displayMetrics = DisplayMetrics()
         val color: String
+        val alpha: Double
         run {
             if (Allral is ColorDrawable) {
                 // ColorDrawable の場合、getColor() メソッドで色を取得できる
                 val color = Allral.color
-                val setAlpha = intent.getIntExtra("ColorIntData",100);
+                val setAlpha = intent.getIntExtra("ColorIntData", 100);
                 // color には色情報が int 型で格納されている (例: 0xFFFF0000 - 赤)
                 println("Background color: $color")
-                val red   = Color.red(color)
+                val red = Color.red(color)
                 val green = Color.green(color)
-                val blue  = Color.blue(color)
-                val alpha = Color.alpha(color)
+                val blue = Color.blue(color)
+                alpha = 0xFF * setAlpha / 100.0
                 println("red: $red")
                 println("green: $green")
                 println("blue: $blue")
                 println("alpha: $alpha")
-                button4.text = color.toString();
-                constraint.setBackgroundColor(Color.argb(setAlpha,red,green,blue))
+                constraint.setBackgroundColor(Color.argb(setAlpha, red, green, blue))
             }
             //Allral.setBackgroundColor(color.toInt())
         }
