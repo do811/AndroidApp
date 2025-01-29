@@ -4,7 +4,7 @@
         xmlns:tools="http://schemas.android.com/tools"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        tools:context=".intentsample.otherscreen">
+        tools:context=".intentsample.otherscreen1">
 
     <ScrollView
             android:id="@+id/scroll"
@@ -38,6 +38,8 @@
                     android:id="@+id/textView" />
 
             <SeekBar
+                    android:max="100"
+                    android:progress="100"
                     android:layout_width="match_parent"
                     android:layout_height="33dp"
                     android:id="@+id/seekBar" />

@@ -2,10 +2,14 @@ package com.example.layout
 
 import com.example.layout.intentsample.otherscreen1
 import android.content.Intent
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.Drawable
+import android.graphics.Color
 import android.os.Bundle
 import android.util.DisplayMetrics
 import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.lifecycle.lifecycleScope
 import com.example.layout.Layouts.AirConditionerLayout
 import com.example.layout.Layouts.LightLayout
@@ -28,8 +32,30 @@ class MainActivity : AppCompatActivity() {
         val button1 = findViewById<Button>(R.id.button1)//左上
         val button2 = findViewById<Button>(R.id.button2)//右下
         val button4 = findViewById<Button>(R.id.button4)//設定ボタン
+        val constraint = findViewById<ConstraintLayout>(R.id.background)
+        val Allral = constraint.background
         val displayMetrics = DisplayMetrics()
-
+        val color: String
+        run {
+            if (Allral is ColorDrawable) {
+                // ColorDrawable の場合、getColor() メソッドで色を取得できる
+                val color = Allral.color
+                val setAlpha = intent.getIntExtra("ColorIntData",100);
+                // color には色情報が int 型で格納されている (例: 0xFFFF0000 - 赤)
+                println("Background color: $color")
+                val red   = Color.red(color)
+                val green = Color.green(color)
+                val blue  = Color.blue(color)
+                val alpha = Color.alpha(color)
+                println("red: $red")
+                println("green: $green")
+                println("blue: $blue")
+                println("alpha: $alpha")
+                button4.text = color.toString();
+                constraint.setBackgroundColor(Color.argb(setAlpha,red,green,blue))
+            }
+            //Allral.setBackgroundColor(color.toInt())
+        }
         val intent2secondsc = Intent(
             this@MainActivity,
             LightLayout::class.java//真ん中左
@@ -40,7 +66,7 @@ class MainActivity : AppCompatActivity() {
         )
         val intent4fourthsc = Intent(
             this@MainActivity,
-            Otherscreen1::class.java
+            otherscreen1::class.java
         )
         val intentElseSc = Intent(
             this@MainActivity,
