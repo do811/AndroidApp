@@ -36,12 +36,12 @@ class MainActivity : AppCompatActivity() {
         val constraint = findViewById<ConstraintLayout>(R.id.background)
         val Allral = constraint.background
         val displayMetrics = DisplayMetrics()
-        val color: String
+        var color: Int = 0;
         val alpha: Double
         run {
             if (Allral is ColorDrawable) {
                 // ColorDrawable の場合、getColor() メソッドで色を取得できる
-                val color = Allral.color
+                color = Allral.color
                 val setAlpha = intent.getIntExtra("ColorIntData", 100);
                 // color には色情報が int 型で格納されている (例: 0xFFFF0000 - 赤)
                 println("Background color: $color")
@@ -73,6 +73,8 @@ class MainActivity : AppCompatActivity() {
             this@MainActivity,
             ElseLayout::class.java
         )
+
+        intent4fourthsc.putExtra("colorInt", color)
 
 //        val echonet = EchonetLiteManager(resources.assets)
 
