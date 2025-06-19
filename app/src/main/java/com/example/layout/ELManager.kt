@@ -63,13 +63,9 @@ object ELManager {
         }
 
         if (deviceList.isEmpty()) {
-            val selfNodeInstanceList =
-                ELObject<Number>(
-                    0,
-                    InetAddress.getByName("224.0.23.0"),
-                    listOf(0x0E, 0xF0, 0x01),
-                    assetManager
-                )
+            val selfNodeInstanceList = ELObject<Number>(
+                0, InetAddress.getByName("224.0.23.0"), listOf(0x0E, 0xF0, 0x01), assetManager
+            )
             deviceList = deviceList.plus(selfNodeInstanceList)
         }
         deviceList[0].get("自ノードインスタンスリストS")
@@ -82,13 +78,11 @@ object ELManager {
         for (i in 1..timeout / socket.soTimeout) {
             try {
                 socket.receive(packet)
-                val list =
-                    ELFormat.parseSelfNodeInstanceList(
-                        ELFormat.parsePacket(
-                            packet,
-                            TID
-                        ), assetManager
-                    )
+                val list = ELFormat.parseSelfNodeInstanceList(
+                    ELFormat.parsePacket(
+                        packet, TID
+                    ), assetManager
+                )
                 println("ELManager:応答を受け取りました:${list}\n")
 
 //                deviceList = deviceList.plus(list)
@@ -102,7 +96,6 @@ object ELManager {
         println("ELManager:検索終了")
         println("ELManager:検索結果:${deviceList}")
     }
-
 
 
     /**
@@ -127,15 +120,11 @@ object ELManager {
             delay(150)
 
             if (deviceList.isEmpty()) {
-                val selfNodeInstanceList =
-                    ELObject<Number>(
-                        0,
-                        InetAddress.getByName("224.0.23.0"),
-                        listOf(0x0E, 0xF0, 0x01),
-                        assetManager
-                    )
+                val selfNodeInstanceList = ELObject<Number>(
+                    0, InetAddress.getByName("224.0.23.0"), listOf(0x0E, 0xF0, 0x01), assetManager
+                )
                 deviceList = deviceList.plus(selfNodeInstanceList)
-                println(deviceList)
+//                println(deviceList)
             }
             deviceList[0].get("自ノードインスタンスリストS")
 
@@ -147,13 +136,11 @@ object ELManager {
             for (i in 1..timeout / socket.soTimeout) {
                 try {
                     socket.receive(packet)
-                    val list =
-                        ELFormat.parseSelfNodeInstanceList(
-                            ELFormat.parsePacket(
-                                packet,
-                                TID
-                            ), assetManager
-                        )
+                    val list = ELFormat.parseSelfNodeInstanceList(
+                        ELFormat.parsePacket(
+                            packet, TID
+                        ), assetManager
+                    )
                     println("ELManager:応答を受け取りました:${list}\n")
 
 //                deviceList = deviceList.plus(list)
@@ -165,7 +152,17 @@ object ELManager {
             socket.close()
 
             println("ELManager:検索終了")
-            println("ELManager:検索結果:${deviceList}")
+//            println("ELManager:検索結果:${
+//                deviceList.map {
+//                    it.getIndentPropertyInfo() + "\n=============================================="
+//                }
+//            }")
+            for (elObject in deviceList) {
+                if (ELFormat.compareEoj(elObject.eoj, listOf(0x01, 0x30))) {
+                    println(elObject.getIndentPropertyInfo())
+                    elObject.setC("光色設定", "daylightColor")
+                }
+            }
         }
     }
 
@@ -191,7 +188,7 @@ object ELManager {
                 for ((key, value) in waitingPacketMap) {
                     if (value != null) continue
                     if (checkPacket(response, key)) {
-                        println("ELManager:got expected packet:$response")
+                        println("ELManager:返答を受け取りました:$response")
                         println()
                         waitingPacketMap[key] = response
                     }
@@ -232,11 +229,7 @@ object ELManager {
         val tid = expect.tid
         if (expect.esv != 0x61.toByte() && expect.esv != 0x62.toByte()) {
             throw IllegalArgumentException(
-                "Echonet: esv is not 0x61 or 0x71 but ${
-                    "%02X".format(
-                        expect.esv
-                    )
-                }"
+                "Echonet: esvが 0x61でも0x71でもなく${"%02X".format(expect.esv)}です"
             )
         }
         val esv = if (expect.esv == 0x61.toByte()) 0x71.toByte() else 0x72.toByte()
@@ -246,11 +239,11 @@ object ELManager {
             println("ELManager:TIDが違います")
             return false
         }
-        if (receive.seoj != expect.deoj) {
+        if (ELFormat.compareEoj(receive.seoj, expect.deoj)) {
             println("ELManager:SEOJは${receive.seoj}ですが、${expect.deoj}が期待されています")
             return false
         }
-        if (receive.deoj != expect.seoj) {
+        if (ELFormat.compareEoj(receive.deoj, expect.seoj)) {
             println("ELManager:DEOJは${receive.deoj}ですが、${expect.seoj}が期待されています")
             return false
         }

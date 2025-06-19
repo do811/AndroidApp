@@ -122,5 +122,22 @@ class ELFormat {
         ): List<ELObject<Number>> {
             return parseSelfNodeInstanceList(parsePacket(packet, collectTid), assetManager)
         }
+
+        fun <T> compareList(list1: List<T>, list2: List<T>): Boolean {
+            return list1.zip(list2).all { (a, b) -> a == b }
+        }
+
+        fun compareEoj(eoj1: List<Number>, eoj2: List<Number>): Boolean {
+            // インスタンスコードがあったら無視する
+            val eoj1 = if (eoj1.size == 3) eoj1.dropLast(1) else eoj1
+            if (eoj2.size != 2) return false
+            val eojByte1 = eoj1.map { it.toByte() }
+
+            val eoj2 = if (eoj2.size == 3) eoj2.dropLast(1) else eoj2
+            if (eoj2.size != 2) return false
+            val eojByte2 = eoj2.map { it.toByte() }
+
+            return compareList(eojByte1, eojByte2)
+        }
     }
 }

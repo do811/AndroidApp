@@ -286,26 +286,17 @@ class ELObject<T : Number>(
         return sendPacket
     }
 
-    private fun <T> compareList(list1: List<T>, list2: List<T>): Boolean {
-        return list1.zip(list2).all { (a, b) -> a == b }
-    }
-
     fun compareEoj(eoj: List<Number>): Boolean {
-        // インスタンスコードがあったら無視する
-        val eoj = if (eoj.size == 3) eoj.dropLast(1) else eoj
-        if (eoj.size != 2) return false
-
-        val eojByte = eoj.map { it.toByte() }
-        return compareList(this.eoj.dropLast(1), eojByte)
+        return ELFormat.compareEoj(this.eoj, eoj)
     }
 
     fun epcToString(epc: List<Byte>): String {
-        return propertyList.find { compareList(it.epc, epc) }?.let { it.name["ja"] } ?: ""
+        return propertyList.find { ELFormat.compareList(it.epc, epc) }?.let { it.name["ja"] } ?: ""
     }
 
     fun edtToString(epc: List<Byte>, edt: List<Byte>): String? {
-        return propertyList.find { compareList(it.epc, epc) }
-            ?.enumList?.find { compareList(it.edt, edt) }
+        return propertyList.find { ELFormat.compareList(it.epc, epc) }
+            ?.enumList?.find { ELFormat.compareList(it.edt, edt) }
             ?.name
     }
 
@@ -321,7 +312,9 @@ class ELObject<T : Number>(
         }
         val epcValue = propertyList.find { it.name["ja"] == epc }?.epc
             ?: propertyList.find { it.name["en"] == epc }?.epc
-            ?: return null
+        if(epcValue == null){
+            println("ELObject:epcが見つかりませんでした")
+            return null}
         val edtValue = when (edt) {
             "" -> null
             // edtが見つからない場合
@@ -346,7 +339,7 @@ class ELObject<T : Number>(
      * @param edt EDTの値
      * @return 送信したパケット（送信失敗時null）
      */
-    private fun setI(epc: String, edt: String): ELPacketData? {
+    fun setI(epc: String, edt: String): ELPacketData? {
         val packet = makePacket(ESV.SETI, epc, edt) ?: return null
         return ELFormat.parsePacket(sendEchonetPacket(packet))
     }
@@ -357,7 +350,7 @@ class ELObject<T : Number>(
      * @param edt EDTの値
      * @return 送信したパケット（送信失敗時null）
      */
-    private fun setC(epc: String, edt: String): ELPacketData? {
+    fun setC(epc: String, edt: String): ELPacketData? {
         val packet = makePacket(ESV.SETC, epc, edt) ?: return null
         return ELFormat.parsePacket(sendEchonetPacket(packet))
     }
